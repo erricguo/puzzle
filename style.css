@@ -1,0 +1,7 @@
+html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f7fb}
+#ui{position:fixed;left:12px;top:12px;z-index:10;display:flex;gap:12px;align-items:center}
+#title{font-weight:700;font-size:18px}
+#controls{display:flex;gap:8px;align-items:center}
+#canvas-container{position:fixed;left:0;top:0;right:0;bottom:0}
+button{padding:6px 10px;border:0;background:#3b82f6;color:#fff;border-radius:6px;cursor:pointer}
+#score{font-weight:600}
