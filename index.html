@@ -1,22 +1,107 @@
 <!doctype html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>水果合併 - Matter.js</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#f7fbef" />
+  <title>蔬菜合併</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="ui">
-    <div id="title">水果合併</div>
-    <div id="controls">
-      <span id="score">分數: 0</span>
-      <span id="level">等級: 1</span>
-      <button id="btnRestart">重玩</button>
-    </div>
-  </div>
-  <div id="canvas-container"></div>
+  <main class="app-shell">
+    <section class="hud" aria-label="遊戲狀態">
+      <div>
+        <h1>蔬菜合併</h1>
+        <p id="nextLabel">下一顆: 豌豆</p>
+      </div>
+      <div class="stats">
+        <span id="score">分數 0</span>
+        <span id="bestLevel">最高 1</span>
+      </div>
+      <button id="pauseButton" type="button" aria-label="暫停遊戲">暫停</button>
+    </section>
+
+    <section class="game-frame" aria-label="遊戲區">
+      <div id="canvas-container"></div>
+      <div id="gameOverPanel" class="game-over" hidden>
+        <strong>遊戲結束</strong>
+        <span id="finalScore">分數 0</span>
+        <span id="finalCombo">最高 COMBO 0</span>
+        <button id="gameOverLeaderboardButton" type="button">查看排行</button>
+        <button id="playAgainButton" type="button">再玩一次</button>
+      </div>
+      <div id="pausePanel" class="pause-panel" hidden>
+        <strong>暫停中</strong>
+        <span>調整節奏，再繼續合成</span>
+        <div class="audio-controls" aria-label="音量控制">
+          <button id="soundButton" type="button" aria-label="音效開關">音效</button>
+          <label>
+            <span>音量</span>
+            <input id="volumeSlider" type="range" min="0" max="100" value="70" aria-label="音量" />
+          </label>
+        </div>
+        <button id="resumeButton" class="resume-button" type="button">繼續遊戲</button>
+        <button id="restartButton" class="quiet-button" type="button" aria-label="重新開始">重新開始</button>
+      </div>
+    </section>
+
+    <section id="startScene" class="start-scene" aria-label="開始畫面">
+      <div class="start-art" aria-hidden="true">
+        <img src="assets/vegetables/01-pea.png" alt="" />
+        <img src="assets/vegetables/04-tomato.png" alt="" />
+        <img src="assets/vegetables/07-corn.png" alt="" />
+        <img src="assets/vegetables/10-pumpkin.png" alt="" />
+      </div>
+      <div class="start-copy">
+        <p>蔬菜合成挑戰</p>
+        <h2>蔬菜合併</h2>
+        <span>拖曳、落下、合併，連續 COMBO 衝高分</span>
+      </div>
+      <div class="start-badges" aria-label="遊戲特色">
+        <span>10 層進化</span>
+        <span>爽快 COMBO</span>
+        <span>全球排行</span>
+      </div>
+      <div class="start-actions">
+        <button id="startButton" class="start-button" type="button">點擊開始</button>
+        <button id="startLeaderboardButton" class="ghost-button" type="button">排行榜</button>
+      </div>
+    </section>
+
+    <section id="leaderboardScene" class="leaderboard-scene" aria-label="排行榜" hidden>
+      <div class="leaderboard-panel">
+        <header class="leaderboard-header">
+          <div>
+            <p>Supabase Leaderboard</p>
+            <h2>排行榜</h2>
+          </div>
+          <button id="closeLeaderboardButton" class="icon-button" type="button" aria-label="關閉排行榜">×</button>
+        </header>
+
+        <div class="account-row">
+          <span id="accountStatus">尚未登入，分數會先存在本機</span>
+          <button id="googleSignInButton" type="button">Google 登入</button>
+        </div>
+
+        <div class="leaderboard-tabs" role="tablist" aria-label="排行榜分類">
+          <button id="scoreTabButton" class="active" type="button">最高分</button>
+          <button id="comboTabButton" type="button">最高 COMBO</button>
+        </div>
+
+        <ol id="leaderboardList" class="leaderboard-list"></ol>
+        <p id="leaderboardMessage" class="leaderboard-message">載入中...</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    window.SUPABASE_CONFIG = window.SUPABASE_CONFIG || {
+      url: 'https://eebwaztfebmqnuarcysh.supabase.co',
+      anonKey: 'sb_publishable_XqjQcP1ct0RQywqQJJ-brw_oPRXTZC-'
+    };
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="main.js"></script>
 </body>
 </html>
