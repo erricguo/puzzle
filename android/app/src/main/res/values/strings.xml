@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Veggie Merge</string>
+    <string name="title_activity_main">Veggie Merge</string>
+    <string name="package_name">com.erricguo.veggiemerge</string>
+    <string name="custom_url_scheme">com.erricguo.veggiemerge</string>
+</resources>

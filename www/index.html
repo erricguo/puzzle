@@ -4,19 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#f7fbef" />
-  <title>蔬菜合併</title>
+  <title>蔬菜合成</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <main class="app-shell">
-    <section class="hud" aria-label="遊戲狀態">
+    <section class="hud" aria-label="遊戲資訊">
       <div>
-        <h1>蔬菜合併</h1>
-        <p id="nextLabel">下一顆: 豌豆</p>
+        <h1>蔬菜合成</h1>
+        <p id="nextLabel">下一個：豌豆</p>
       </div>
       <div class="stats">
         <span id="score">分數 0</span>
-        <span id="bestLevel">最高 1</span>
+        <span id="bestLevel">最高等級 1</span>
       </div>
       <button id="pauseButton" type="button" aria-label="暫停遊戲">暫停</button>
     </section>
@@ -26,13 +26,13 @@
       <div id="gameOverPanel" class="game-over" hidden>
         <strong>遊戲結束</strong>
         <span id="finalScore">分數 0</span>
-        <span id="finalCombo">最高 COMBO 0</span>
-        <button id="gameOverLeaderboardButton" type="button">查看排行</button>
+        <span id="finalCombo">Combo 0</span>
+        <button id="gameOverLeaderboardButton" type="button">排行榜</button>
         <button id="playAgainButton" type="button">再玩一次</button>
       </div>
       <div id="pausePanel" class="pause-panel" hidden>
         <strong>暫停中</strong>
-        <span>調整節奏，再繼續合成</span>
+        <span>你可以在這裡調整音量大小，確認現在聽起來是否合適。</span>
         <div class="audio-controls" aria-label="音量控制">
           <button id="soundButton" type="button" aria-label="音效開關">音效</button>
           <label>
@@ -53,18 +53,18 @@
         <img src="assets/vegetables/10-pumpkin.png" alt="" />
       </div>
       <div class="start-copy">
-        <p>蔬菜合成挑戰</p>
-        <h2>蔬菜合併</h2>
-        <span>拖曳、落下、合併，連續 COMBO 衝高分</span>
+        <p>準備好開始了嗎</p>
+        <h2>蔬菜合成</h2>
+        <span>拖曳、合併、累積 COMBO，衝出更高分數。</span>
       </div>
       <div class="start-badges" aria-label="遊戲特色">
-        <span>10 層進化</span>
-        <span>爽快 COMBO</span>
-        <span>全球排行</span>
+        <span>10 種蔬菜</span>
+        <span>連鎖 COMBO</span>
+        <span>排行榜</span>
       </div>
       <div class="start-actions">
-        <button id="startButton" class="start-button" type="button">點擊開始</button>
-        <button id="startLeaderboardButton" class="ghost-button" type="button">排行榜</button>
+        <button id="startButton" class="start-button" type="button">開始遊戲</button>
+        <button id="startLeaderboardButton" class="ghost-button" type="button">查看排行榜</button>
       </div>
     </section>
 
@@ -79,13 +79,13 @@
         </header>
 
         <div class="account-row">
-          <span id="accountStatus">尚未登入，分數會先存在本機</span>
+          <span id="accountStatus">尚未登入，排行榜將使用本機資料。</span>
           <button id="googleSignInButton" type="button">Google 登入</button>
         </div>
 
-        <div class="leaderboard-tabs" role="tablist" aria-label="排行榜分類">
-          <button id="scoreTabButton" class="active" type="button">最高分</button>
-          <button id="comboTabButton" type="button">最高 COMBO</button>
+        <div class="leaderboard-tabs" role="tablist" aria-label="排行榜分頁">
+          <button id="scoreTabButton" class="active" type="button">分數榜</button>
+          <button id="comboTabButton" type="button">Combo</button>
         </div>
 
         <ol id="leaderboardList" class="leaderboard-list"></ol>

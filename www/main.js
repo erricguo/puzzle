@@ -34,6 +34,7 @@ const COMBO_MAX_DURATION = 2000;
 const COMBO_IMPACT_DURATION = 520;
 const COMBO_SHAKE_DURATION = 280;
 const COMBO_COLORS = ['#68d84d', '#ffd447', '#ff8c32', '#ff5bbd', '#8d70ff', '#35d7ff'];
+const BACKGROUND_MUSIC_SRC = 'assets/sound/Juice%20Merge%20Parade.mp3';
 
 const container = document.getElementById('canvas-container');
 const scoreEl = document.getElementById('score');
@@ -72,6 +73,7 @@ const state = {
   width: 0,
   height: 0,
   score: 0,
+  scoreRemainder: 0,
   bestLevel: 1,
   nextLevel: 0,
   aiming: false,
@@ -97,10 +99,10 @@ const audioState = {
   master: null,
   musicGain: null,
   sfxGain: null,
+  musicElement: null,
+  musicSource: null,
   enabled: localStorage.getItem('veggieMergeSoundEnabled') !== 'false',
-  volume: Number(localStorage.getItem('veggieMergeVolume') || 0.7),
-  musicTimer: null,
-  musicStep: 0
+  volume: Number(localStorage.getItem('veggieMergeVolume') || 0.7)
 };
 const leaderboardState = {
   activeTab: 'score',
@@ -346,6 +348,7 @@ function setupAudioUi() {
 function ensureAudio() {
   if (audioState.context) {
     audioState.context.resume?.();
+    ensureBackgroundMusic();
     return audioState.context;
   }
 
@@ -357,18 +360,33 @@ function ensureAudio() {
   audioState.master = context.createGain();
   audioState.musicGain = context.createGain();
   audioState.sfxGain = context.createGain();
-  audioState.master.gain.value = audioState.enabled ? audioState.volume : 0;
-  audioState.musicGain.gain.value = 0.28;
+  audioState.master.gain.value = audioState.enabled ? 1 : 0;
+  audioState.musicGain.gain.value = audioState.volume;
   audioState.sfxGain.gain.value = 0.85;
   audioState.musicGain.connect(audioState.master);
   audioState.sfxGain.connect(audioState.master);
   audioState.master.connect(context.destination);
+  ensureBackgroundMusic();
   return context;
+}
+
+function ensureBackgroundMusic() {
+  if (!audioState.context || audioState.musicSource) return;
+
+  const music = new Audio(BACKGROUND_MUSIC_SRC);
+  music.loop = true;
+  music.preload = 'auto';
+  audioState.musicElement = music;
+  audioState.musicSource = audioState.context.createMediaElementSource(music);
+  audioState.musicSource.connect(audioState.musicGain);
 }
 
 function updateAudioVolume() {
   if (audioState.master) {
-    audioState.master.gain.setTargetAtTime(audioState.enabled ? audioState.volume : 0, audioState.context.currentTime, 0.025);
+    audioState.master.gain.setTargetAtTime(audioState.enabled ? 1 : 0, audioState.context.currentTime, 0.025);
+  }
+  if (audioState.musicGain) {
+    audioState.musicGain.gain.setTargetAtTime(audioState.volume, audioState.context.currentTime, 0.025);
   }
   soundButton.textContent = audioState.enabled ? '音效' : '靜音';
   soundButton.classList.toggle('muted', !audioState.enabled);
@@ -461,25 +479,14 @@ function playGameOverSound() {
 
 function startMusic() {
   const context = ensureAudio();
-  if (!context || audioState.musicTimer) return;
+  if (!context || !audioState.musicElement || !audioState.enabled || !state.hasStarted || state.gameOver) return;
 
-  const notes = [392, 440, 523.25, 587.33, 523.25, 440, 392, 329.63];
-  audioState.musicTimer = window.setInterval(() => {
-    if (!state.hasStarted || state.paused || state.gameOver || !audioState.enabled) return;
-    const note = notes[audioState.musicStep % notes.length];
-    const bass = [130.81, 146.83, 164.81, 196][Math.floor(audioState.musicStep / 2) % 4];
-    makeOsc({ frequency: note, type: 'triangle', gain: 0.045, duration: 0.22, target: audioState.musicGain });
-    if (audioState.musicStep % 2 === 0) {
-      makeOsc({ frequency: bass, type: 'sine', gain: 0.035, duration: 0.32, target: audioState.musicGain });
-    }
-    audioState.musicStep += 1;
-  }, 260);
+  audioState.musicElement.play().catch(() => {});
 }
 
 function stopMusic() {
-  if (audioState.musicTimer) {
-    clearInterval(audioState.musicTimer);
-    audioState.musicTimer = null;
+  if (audioState.musicElement) {
+    audioState.musicElement.pause();
   }
 }
 
@@ -508,7 +515,7 @@ function updateHud() {
   scoreEl.textContent = `分數 ${state.score}`;
   bestLevelEl.textContent = `最高 ${state.bestLevel}`;
   finalScoreEl.textContent = `分數 ${state.score}`;
-  finalComboEl.textContent = `最高 COMBO ${state.bestCombo}`;
+  finalComboEl.textContent = `Combo ${state.bestCombo}`;
 }
 
 function comboDurationFor(combo) {
@@ -518,6 +525,15 @@ function comboDurationFor(combo) {
 
 function comboColor(combo) {
   return COMBO_COLORS[Math.max(0, combo - 1) % COMBO_COLORS.length];
+}
+
+function scoreWithComboBonus(baseScore, combo) {
+  const rawScore = baseScore * (1 + combo * 0.01);
+  const wholeScore = Math.floor(rawScore);
+  state.scoreRemainder += rawScore - wholeScore;
+  const carriedScore = Math.floor(state.scoreRemainder);
+  state.scoreRemainder -= carriedScore;
+  return wholeScore + carriedScore;
 }
 
 function clearExpiredCombo(now = performance.now()) {
@@ -712,7 +728,7 @@ function mergeVegetables(a, b) {
     const combo = registerCombo();
     pushComboBurst(midpoint.x, midpoint.y, combo);
     playMergeSound(combo, nextLevel);
-    state.score += nextLevel + 1;
+    state.score += scoreWithComboBonus(nextLevel + 1, combo);
     updateHud();
   });
 }
@@ -724,6 +740,7 @@ function resetGame() {
     }
   }
   state.score = 0;
+  state.scoreRemainder = 0;
   state.bestLevel = 1;
   state.gameOver = false;
   state.aiming = false;
@@ -763,8 +780,9 @@ function finishGame() {
   pausePanel.hidden = true;
   pauseButton.textContent = '暫停';
   finalScoreEl.textContent = `分數 ${state.score}`;
-  finalComboEl.textContent = `最高 COMBO ${state.bestCombo}`;
+  finalComboEl.textContent = `Combo ${state.bestCombo}`;
   gameOverPanel.hidden = false;
+  stopMusic();
   playGameOverSound();
   submitLeaderboardScore();
 }
@@ -1006,6 +1024,8 @@ soundButton.addEventListener('click', () => {
   if (audioState.enabled) {
     playClickSound();
     startMusic();
+  } else {
+    stopMusic();
   }
 });
 volumeSlider.addEventListener('input', () => {
@@ -1015,6 +1035,7 @@ volumeSlider.addEventListener('input', () => {
     audioState.enabled = true;
   }
   updateAudioVolume();
+  startMusic();
 });
 restartButton.addEventListener('click', resetGame);
 playAgainButton.addEventListener('click', resetGame);
