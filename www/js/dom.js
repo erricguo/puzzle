@@ -27,6 +27,7 @@ const skillPanelKicker = document.getElementById('skillPanelKicker');
 const skillCardsEl = document.getElementById('skillCards');
 const refreshSkillButton = document.getElementById('refreshSkillButton');
 const debugPanel = document.getElementById('debugPanel');
+const debugFpsValue = document.getElementById('debugFpsValue');
 const closeDebugButton = document.getElementById('closeDebugButton');
 const debugLevelButton = document.getElementById('debugLevelButton');
 const debugCorruptionButton = document.getElementById('debugCorruptionButton');

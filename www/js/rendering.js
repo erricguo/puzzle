@@ -340,9 +340,29 @@ function drawFertilizerEffects(ctx, now) {
   }
 }
 
+function updateFpsMeter(now) {
+  if (!state.fpsLastAt) {
+    state.fpsLastAt = now;
+    state.fpsFrames = 0;
+    return;
+  }
+
+  state.fpsFrames += 1;
+  const elapsed = now - state.fpsLastAt;
+  if (elapsed < 500) return;
+
+  state.fpsValue = Math.round((state.fpsFrames * 1000) / elapsed);
+  state.fpsFrames = 0;
+  state.fpsLastAt = now;
+  if (debugFpsValue) {
+    debugFpsValue.textContent = String(state.fpsValue);
+  }
+}
+
 function drawGameOverlay() {
   const ctx = render.context;
   const now = performance.now();
+  updateFpsMeter(now);
   const shakeProgress = Math.max(0, 1 - (now - state.comboPulseStartedAt) / COMBO_SHAKE_DURATION);
   const shakeStrength = Math.min(16, 4 + state.combo * 0.55) * shakeProgress * shakeProgress;
 

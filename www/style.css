@@ -779,6 +779,36 @@ button {
   letter-spacing: 0.08em;
 }
 
+.debug-metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.debug-metric span {
+  color: rgba(247, 251, 239, 0.82);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.debug-metric strong {
+  min-width: 46px;
+  color: #7cff5d;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: right;
+  text-shadow: 0 0 12px rgba(124, 255, 93, 0.34);
+}
+
 .debug-panel button {
   border: 2px solid rgba(255, 255, 255, 0.78);
   background: linear-gradient(180deg, #54d6c9 0%, #2c9a91 100%);
