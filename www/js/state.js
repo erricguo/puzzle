@@ -38,7 +38,8 @@ const audioState = {
   musicSource: null,
   musicLoading: null,
   enabled: localStorage.getItem('veggieMergeSoundEnabled') !== 'false',
-  volume: Number(localStorage.getItem('veggieMergeVolume') || 0.7)
+  musicVolume: Number(localStorage.getItem('veggieMergeMusicVolume') || localStorage.getItem('veggieMergeVolume') || 0.7),
+  sfxVolume: Number(localStorage.getItem('veggieMergeSfxVolume') || 0.85)
 };
 const leaderboardState = {
   activeTab: 'score',

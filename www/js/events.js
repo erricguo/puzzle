@@ -39,14 +39,23 @@ soundButton.addEventListener('click', () => {
     stopMusic();
   }
 });
-volumeSlider.addEventListener('input', () => {
+musicVolumeSlider.addEventListener('input', () => {
   ensureAudio();
-  audioState.volume = Number(volumeSlider.value) / 100;
-  if (audioState.volume > 0) {
+  audioState.musicVolume = Number(musicVolumeSlider.value) / 100;
+  if (audioState.musicVolume > 0) {
     audioState.enabled = true;
   }
   updateAudioVolume();
   startMusic();
+});
+sfxVolumeSlider.addEventListener('input', () => {
+  ensureAudio();
+  audioState.sfxVolume = Number(sfxVolumeSlider.value) / 100;
+  if (audioState.sfxVolume > 0) {
+    audioState.enabled = true;
+  }
+  updateAudioVolume();
+  playClickSound();
 });
 restartButton.addEventListener('click', resetGame);
 playAgainButton.addEventListener('click', resetGame);

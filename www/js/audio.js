@@ -1,7 +1,10 @@
 function setupAudioUi() {
-  volumeSlider.value = Math.round(audioState.volume * 100);
+  musicVolumeSlider.value = Math.round(audioState.musicVolume * 100);
+  sfxVolumeSlider.value = Math.round(audioState.sfxVolume * 100);
   soundButton.textContent = audioState.enabled ? '音效' : '靜音';
   soundButton.classList.toggle('muted', !audioState.enabled);
+  updateSliderFill(musicVolumeSlider);
+  updateSliderFill(sfxVolumeSlider);
 }
 
 function ensureAudio() {
@@ -20,8 +23,8 @@ function ensureAudio() {
   audioState.musicGain = context.createGain();
   audioState.sfxGain = context.createGain();
   audioState.master.gain.value = audioState.enabled ? 1 : 0;
-  audioState.musicGain.gain.value = audioState.volume;
-  audioState.sfxGain.gain.value = 0.85;
+  audioState.musicGain.gain.value = audioState.musicVolume;
+  audioState.sfxGain.gain.value = audioState.sfxVolume;
   audioState.musicGain.connect(audioState.master);
   audioState.sfxGain.connect(audioState.master);
   audioState.master.connect(context.destination);
@@ -77,12 +80,26 @@ function updateAudioVolume() {
     audioState.master.gain.setTargetAtTime(audioState.enabled ? 1 : 0, audioState.context.currentTime, 0.025);
   }
   if (audioState.musicGain) {
-    audioState.musicGain.gain.setTargetAtTime(audioState.volume, audioState.context.currentTime, 0.025);
+    audioState.musicGain.gain.setTargetAtTime(audioState.musicVolume, audioState.context.currentTime, 0.025);
+  }
+  if (audioState.sfxGain) {
+    audioState.sfxGain.gain.setTargetAtTime(audioState.sfxVolume, audioState.context.currentTime, 0.025);
   }
   soundButton.textContent = audioState.enabled ? '音效' : '靜音';
   soundButton.classList.toggle('muted', !audioState.enabled);
+  updateSliderFill(musicVolumeSlider);
+  updateSliderFill(sfxVolumeSlider);
   localStorage.setItem('veggieMergeSoundEnabled', String(audioState.enabled));
-  localStorage.setItem('veggieMergeVolume', String(audioState.volume));
+  localStorage.setItem('veggieMergeMusicVolume', String(audioState.musicVolume));
+  localStorage.setItem('veggieMergeSfxVolume', String(audioState.sfxVolume));
+}
+
+function updateSliderFill(slider) {
+  const min = Number(slider.min || 0);
+  const max = Number(slider.max || 100);
+  const value = Number(slider.value || 0);
+  const percent = Math.round(((value - min) / (max - min)) * 100);
+  slider.style.setProperty('--value', `${percent}%`);
 }
 
 function makeOsc({ frequency, type = 'sine', gain = 0.2, start = 0, duration = 0.2, target = null }) {

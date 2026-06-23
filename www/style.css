@@ -180,8 +180,8 @@ button {
 
 .audio-controls label {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
   align-items: center;
   color: var(--muted);
   font-size: 13px;
@@ -194,19 +194,51 @@ button {
 }
 
 .audio-controls input[type="range"] {
-  height: 10px;
+  --value: 70%;
+  height: 24px;
+  border: 0;
   border-radius: 999px;
-  background: rgba(75, 143, 61, 0.18);
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+
+.audio-controls input[type="range"]::-webkit-slider-runnable-track {
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, #ffbf45 0 var(--value), rgba(75, 143, 61, 0.18) var(--value) 100%);
+  box-shadow: inset 0 2px 3px rgba(69, 102, 49, 0.18), 0 3px 0 rgba(75, 143, 61, 0.18);
 }
 
 .audio-controls input[type="range"]::-webkit-slider-thumb {
+  width: 26px;
+  height: 26px;
+  margin-top: -8px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fff8ca 0%, #ffbf45 100%);
+  box-shadow: 0 4px 0 #b84b20, 0 8px 12px rgba(126, 73, 28, 0.18);
+  appearance: none;
+}
+
+.audio-controls input[type="range"]::-moz-range-track {
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, #ffbf45 0 var(--value), rgba(75, 143, 61, 0.18) var(--value) 100%);
+  box-shadow: inset 0 2px 3px rgba(69, 102, 49, 0.18), 0 3px 0 rgba(75, 143, 61, 0.18);
+}
+
+.audio-controls input[type="range"]::-moz-range-thumb {
   width: 22px;
   height: 22px;
   border: 2px solid #fff;
   border-radius: 50%;
-  background: #ffbf45;
-  box-shadow: 0 3px 0 #b84b20;
-  appearance: none;
+  background: linear-gradient(180deg, #fff8ca 0%, #ffbf45 100%);
+  box-shadow: 0 4px 0 #b84b20, 0 8px 12px rgba(126, 73, 28, 0.18);
 }
 
 .game-over {

@@ -36,8 +36,12 @@
         <div class="audio-controls" aria-label="音量控制">
           <button id="soundButton" type="button" aria-label="音效開關">音效</button>
           <label>
-            <span>音量</span>
-            <input id="volumeSlider" type="range" min="0" max="100" value="70" aria-label="音量" />
+            <span>音樂</span>
+            <input id="musicVolumeSlider" type="range" min="0" max="100" value="70" aria-label="音樂音量" />
+          </label>
+          <label>
+            <span>音效</span>
+            <input id="sfxVolumeSlider" type="range" min="0" max="100" value="85" aria-label="音效音量" />
           </label>
         </div>
         <button id="resumeButton" class="resume-button" type="button">繼續遊戲</button>
@@ -72,7 +76,6 @@
       <div class="leaderboard-panel">
         <header class="leaderboard-header">
           <div>
-            <p>Supabase Leaderboard</p>
             <h2>排行榜</h2>
           </div>
           <button id="closeLeaderboardButton" class="icon-button" type="button" aria-label="關閉排行榜">×</button>
