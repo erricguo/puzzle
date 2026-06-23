@@ -9,6 +9,7 @@ const BLAST_ANIMATION_DURATION = 520;
 const FERTILIZER_ANIMATION_DURATION = 620;
 const FERTILIZER_IMAGE_SRC = 'assets/images/fertilizer.png';
 const PERMANENT_SKILL_MAX_STACKS = 5;
+const SKILL_CHOICE_UNLOCK_DELAY = 1500;
 
 const fertilizerImage = new Image();
 fertilizerImage.src = FERTILIZER_IMAGE_SRC;
@@ -103,6 +104,7 @@ function maybeShowSkillPanel() {
 
   state.pendingSkillChoices -= 1;
   state.isChoosingSkill = true;
+  state.skillChoicesUnlockAt = performance.now() + SKILL_CHOICE_UNLOCK_DELAY;
   state.paused = true;
   cancelAiming();
   engine.timing.timeScale = 0;
@@ -198,6 +200,8 @@ function setSkillChoices(skills) {
 
 function renderSkillCards(skills) {
   skillCardsEl.replaceChildren();
+  const locked = performance.now() < state.skillChoicesUnlockAt;
+  skillCardsEl.classList.toggle('skill-cards-waiting', locked);
   skills.forEach((skill) => {
     const button = document.createElement('button');
     button.type = 'button';
@@ -219,6 +223,15 @@ function renderSkillCards(skills) {
     });
     skillCardsEl.appendChild(button);
   });
+
+  if (locked) {
+    window.setTimeout(updateSkillCardLockState, Math.max(0, state.skillChoicesUnlockAt - performance.now()));
+  }
+}
+
+function updateSkillCardLockState() {
+  const locked = performance.now() < state.skillChoicesUnlockAt;
+  skillCardsEl.classList.toggle('skill-cards-waiting', locked);
 }
 
 function updateRefreshSkillButton() {
@@ -252,6 +265,7 @@ function refreshSkillCards() {
   }
 
   state.skillRefreshesRemaining -= 1;
+  state.skillChoicesUnlockAt = performance.now() + SKILL_CHOICE_UNLOCK_DELAY;
   setSkillChoices(pickRefreshedSkillOptions(available));
   updateRefreshSkillButton();
   playClickSound();
@@ -297,6 +311,8 @@ async function showRewardedSkillRefreshAd() {
 }
 
 function chooseSkill(skillId) {
+  if (performance.now() < state.skillChoicesUnlockAt) return;
+
   const skill = SKILL_POOL.find((item) => item.id === skillId);
   if (!skill || isSkillMaxed(skill)) return;
 
@@ -308,6 +324,7 @@ function chooseSkill(skillId) {
   state.skillRefreshesRemaining = 0;
   state.skillRefreshAdBusy = false;
   state.currentSkillChoiceIds = [];
+  state.skillChoicesUnlockAt = 0;
   playClickSound();
   closeSkillPanel();
 }
@@ -529,6 +546,7 @@ function resetSkillState() {
   state.skillRefreshesRemaining = 0;
   state.skillRefreshAdBusy = false;
   state.currentSkillChoiceIds = [];
+  state.skillChoicesUnlockAt = 0;
   state.selectedSkills = [];
   state.comboScoreBonus = 0;
   state.dropSpeedBonus = 0;

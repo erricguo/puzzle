@@ -1,7 +1,7 @@
 const engine = Engine.create({
-  gravity: { x: 0, y: 1.365 }
+  gravity: { x: 0, y: 1.0 }
 });
-const BASE_GRAVITY_Y = 1.365;
+const BASE_GRAVITY_Y = 1.0;
 const world = engine.world;
 const runner = Runner.create();
 
@@ -23,6 +23,7 @@ const state = {
   pointerId: null,
   hasStarted: false,
   paused: false,
+  pageActive: !document.hidden,
   gameOver: false,
   lastDropAt: 0,
   suppressDropUntil: 0,
@@ -44,6 +45,7 @@ const state = {
   skillRefreshesRemaining: 0,
   skillRefreshAdBusy: false,
   currentSkillChoiceIds: [],
+  skillChoicesUnlockAt: 0,
   selectedSkills: [],
   comboScoreBonus: 0,
   dropSpeedBonus: 0,

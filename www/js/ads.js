@@ -92,6 +92,7 @@ async function showRewardedRefreshAd() {
   const AdMob = await ensureAdMob();
 
   const handles = [];
+  stopMusic();
   handles.push(await addAdMobListener(AdMob, 'onRewardedVideoAdLoaded', (info) => {
     console.info('Reward ad loaded', info);
   }));
@@ -139,6 +140,7 @@ async function showRewardedRefreshAd() {
     return Boolean(reward);
   } finally {
     removeAdMobListeners(handles);
+    startMusic();
   }
 }
 

@@ -212,7 +212,7 @@ function playGameOverSound() {
 
 function startMusic() {
   const context = ensureAudio();
-  if (!context || !audioState.enabled || !state.hasStarted || state.gameOver || audioState.musicSource) return;
+  if (!context || !audioState.enabled || !state.hasStarted || !state.pageActive || state.gameOver || audioState.musicSource) return;
 
   if (!audioState.musicBuffer) {
     loadBackgroundMusic();
@@ -232,5 +232,14 @@ function stopMusic() {
     source.onended = null;
     source.stop();
     source.disconnect();
+  }
+}
+
+function updatePageAudioState() {
+  state.pageActive = !document.hidden;
+  if (state.pageActive) {
+    startMusic();
+  } else {
+    stopMusic();
   }
 }

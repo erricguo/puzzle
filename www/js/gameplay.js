@@ -86,7 +86,7 @@ function vegetableOptions(level) {
   const veg = VEGETABLES[level];
   return {
     restitution: 0.36,
-    friction: 0.025,
+    friction: 0.015,
     frictionAir: 0.002,
     density: 0.0011 + level * 0.00008,
     label: 'vegetable',

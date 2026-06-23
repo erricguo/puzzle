@@ -97,6 +97,12 @@ restartButton.addEventListener('click', resetGame);
 playAgainButton.addEventListener('click', resetGame);
 window.addEventListener('resize', resizeGame);
 window.addEventListener('orientationchange', () => setTimeout(resizeGame, 250));
+document.addEventListener('visibilitychange', updatePageAudioState);
+window.addEventListener('pagehide', () => {
+  state.pageActive = false;
+  stopMusic();
+});
+window.addEventListener('pageshow', updatePageAudioState);
 
 setupSupabase();
 setupAudioUi();
