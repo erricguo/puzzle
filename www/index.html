@@ -13,10 +13,14 @@
       <div>
         <h1>蔬菜合成</h1>
         <p id="nextLabel">下一個：豌豆</p>
+        <div class="exp-meter" aria-label="經驗值">
+          <span id="expFill"></span>
+        </div>
       </div>
       <div class="stats">
         <span id="score">分數 0</span>
         <span id="bestLevel">最高等級 1</span>
+        <span id="playerLevel">Lv 1</span>
       </div>
       <button id="pauseButton" type="button" aria-label="暫停遊戲">暫停</button>
     </section>
@@ -46,6 +50,14 @@
         </div>
         <button id="resumeButton" class="resume-button" type="button">繼續遊戲</button>
         <button id="restartButton" class="quiet-button" type="button" aria-label="重新開始">重新開始</button>
+      </div>
+      <div id="skillPanel" class="skill-panel" hidden>
+        <div class="skill-panel-inner">
+          <p id="skillPanelKicker">等級 5</p>
+          <strong>選擇技能</strong>
+          <span>技能可以重複選擇並疊加效果。</span>
+          <div id="skillCards" class="skill-cards" aria-label="技能選項"></div>
+        </div>
       </div>
     </section>
 
@@ -112,6 +124,7 @@
   <script src="js/leaderboard.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/hud-combo.js"></script>
+  <script src="js/skills.js"></script>
   <script src="js/gameplay.js"></script>
   <script src="js/rendering.js"></script>
   <script src="js/events.js"></script>

@@ -6,6 +6,8 @@ function setNextLevel() {
 function updateHud() {
   scoreEl.textContent = `分數 ${state.score}`;
   bestLevelEl.textContent = `最高 ${state.bestLevel}`;
+  playerLevelEl.textContent = `Lv ${state.playerLevel} ${state.exp}/${state.expToNext}`;
+  expFillEl.style.width = `${clamp((state.exp / state.expToNext) * 100, 0, 100)}%`;
   finalScoreEl.textContent = `分數 ${state.score}`;
   finalComboEl.textContent = `最高 Combo ${state.bestCombo}`;
 }
@@ -20,7 +22,7 @@ function comboColor(combo) {
 }
 
 function scoreWithComboBonus(baseScore, combo) {
-  const rawScore = baseScore * (1 + combo * 0.01);
+  const rawScore = baseScore * (1 + (combo + state.comboScoreBonus) * 0.01);
   const wholeScore = Math.floor(rawScore);
   state.scoreRemainder += rawScore - wholeScore;
   const carriedScore = Math.floor(state.scoreRemainder);
@@ -29,6 +31,15 @@ function scoreWithComboBonus(baseScore, combo) {
 }
 
 function clearExpiredCombo(now = performance.now()) {
+  if (isComboFrozen(now)) {
+    if (state.combo > 0 && state.comboFreezeLastAt > 0) {
+      state.comboExpiresAt += now - state.comboFreezeLastAt;
+    }
+    state.comboFreezeLastAt = now;
+    return;
+  }
+
+  state.comboFreezeLastAt = 0;
   if (state.combo > 0 && now >= state.comboExpiresAt) {
     state.combo = 0;
     state.comboDuration = 0;

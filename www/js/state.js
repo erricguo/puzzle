@@ -1,6 +1,7 @@
 const engine = Engine.create({
   gravity: { x: 0, y: 1.05 }
 });
+const BASE_GRAVITY_Y = 1.05;
 const world = engine.world;
 const runner = Runner.create();
 
@@ -25,10 +26,24 @@ const state = {
   comboExpiresAt: 0,
   comboPulseStartedAt: 0,
   comboPulseColor: COMBO_COLORS[0],
+  playerLevel: 1,
+  exp: 0,
+  expToNext: 12,
+  pendingSkillChoices: 0,
+  isChoosingSkill: false,
+  selectedSkills: [],
+  comboScoreBonus: 0,
+  dropSpeedBonus: 0,
+  fastFallExpiresAt: 0,
+  comboFreezeExpiresAt: 0,
+  comboFreezeLastAt: 0,
+  doubleDropExpiresAt: 0,
+  activeSkillLevel: 0,
   scoreSaved: false
 };
 
 const comboBursts = [];
+const blastEffects = [];
 const audioState = {
   context: null,
   master: null,

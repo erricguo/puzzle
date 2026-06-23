@@ -1,5 +1,5 @@
 function setPaused(paused) {
-  if (!state.hasStarted || state.gameOver) return;
+  if (!state.hasStarted || state.gameOver || state.isChoosingSkill) return;
   state.paused = paused;
   state.aiming = false;
   engine.timing.timeScale = paused ? 0 : 1;
@@ -98,13 +98,21 @@ function createVegetable(level, x, y) {
 function dropVegetable() {
   if (!state.hasStarted || state.paused || state.gameOver) return;
   const now = performance.now();
-  if (now - state.lastDropAt < 260) return;
+  if (now - state.lastDropAt < dropCooldownFor(now)) return;
   const cfg = VEGETABLES[state.nextLevel];
   const x = clamp(state.aimX, cfg.radius + 8, state.width - cfg.radius - 8);
   const body = createVegetable(state.nextLevel, x, 72);
   Body.setVelocity(body, { x: (Math.random() - 0.5) * 1.2, y: 0 });
   Body.setAngle(body, (Math.random() - 0.5) * 0.7);
   Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.16);
+  if (isDoubleDropActive(now)) {
+    const offset = cfg.radius + 10;
+    const secondX = clamp(x + (x < state.width / 2 ? offset : -offset), cfg.radius + 8, state.width - cfg.radius - 8);
+    const second = createVegetable(state.nextLevel, secondX, 72);
+    Body.setVelocity(second, { x: (Math.random() - 0.5) * 1.2, y: 0 });
+    Body.setAngle(second, (Math.random() - 0.5) * 0.7);
+    Body.setAngularVelocity(second, (Math.random() - 0.5) * 0.16);
+  }
   playDropSound(state.nextLevel);
   state.lastDropAt = now;
   setNextLevel();
@@ -138,7 +146,7 @@ function endAim(event) {
 }
 
 function mergeVegetables(a, b) {
-  if (a.isMerging || b.isMerging || a.vegLevel !== b.vegLevel || a.vegLevel >= VEGETABLES.length - 1) {
+  if (a.isMerging || b.isMerging || a.isBlasting || b.isBlasting || a.vegLevel !== b.vegLevel || a.vegLevel >= VEGETABLES.length - 1) {
     return;
   }
 
@@ -162,6 +170,7 @@ function mergeVegetables(a, b) {
     pushComboBurst(midpoint.x, midpoint.y, combo);
     playMergeSound(combo, nextLevel);
     state.score += scoreWithComboBonus(nextLevel + 1, combo);
+    gainExperience(nextLevel + 1);
     updateHud();
   });
 }
@@ -179,6 +188,7 @@ function resetGame() {
   state.aiming = false;
   state.paused = false;
   engine.timing.timeScale = 1;
+  resetSkillState();
   state.combo = 0;
   state.bestCombo = 0;
   state.comboDuration = 0;
@@ -188,6 +198,7 @@ function resetGame() {
   comboBursts.length = 0;
   gameOverPanel.hidden = true;
   pausePanel.hidden = true;
+  skillPanel.hidden = true;
   pauseButton.textContent = '暫停';
   setNextLevel();
   updateHud();
@@ -211,6 +222,7 @@ function finishGame() {
   state.paused = false;
   engine.timing.timeScale = 1;
   pausePanel.hidden = true;
+  skillPanel.hidden = true;
   pauseButton.textContent = '暫停';
   finalScoreEl.textContent = `分數 ${state.score}`;
   finalComboEl.textContent = `最高 Combo ${state.bestCombo}`;
@@ -223,8 +235,9 @@ function finishGame() {
 function checkDangerLine() {
   if (!state.hasStarted || state.paused || state.gameOver) return;
   const now = performance.now();
+  updateActiveSkills(now);
   clearExpiredCombo(now);
-  const bodies = Composite.allBodies(world).filter((body) => body.label === 'vegetable' && !body.isMerging);
+  const bodies = Composite.allBodies(world).filter((body) => body.label === 'vegetable' && !body.isMerging && !body.isBlasting);
   for (const body of bodies) {
     if (now < body.canTriggerDangerAt || body.position.y < state.dangerY) {
       body.dangerEnteredAt = null;
