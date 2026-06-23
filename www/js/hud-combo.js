@@ -61,6 +61,9 @@ function registerCombo(now = performance.now()) {
 }
 
 function pushComboBurst(x, y, combo, now = performance.now()) {
+  if (comboBursts.length >= 4) {
+    comboBursts.shift();
+  }
   comboBursts.push({
     x,
     y,

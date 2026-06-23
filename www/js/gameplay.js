@@ -40,8 +40,11 @@ function createWallBodies() {
 
 function resizeGame() {
   const rect = container.getBoundingClientRect();
-  state.width = Math.max(300, Math.floor(rect.width));
-  state.height = Math.max(520, Math.floor(rect.height));
+  const nextWidth = Math.max(300, Math.floor(rect.width));
+  const nextHeight = Math.max(520, Math.floor(rect.height));
+  const sizeChanged = nextWidth !== state.width || nextHeight !== state.height;
+  state.width = nextWidth;
+  state.height = nextHeight;
   state.dangerY = Math.max(112, Math.min(152, Math.round(state.height * 0.22)));
   state.aimX = state.aimX || state.width / 2;
 
@@ -60,10 +63,15 @@ function resizeGame() {
   uiOverlay.style.width = `${state.width}px`;
   uiOverlay.style.height = `${state.height}px`;
 
+  if (!sizeChanged && walls.floor) return;
+  if (state.paused && walls.floor) return;
+
   if (walls.floor) {
     Composite.remove(world, [walls.floor, walls.left, walls.right]);
   }
   createWallBodies();
+  state.wallWidth = state.width;
+  state.wallHeight = state.height;
 }
 
 function vegetableOptions(level) {

@@ -1,39 +1,53 @@
-function drawVegetableSprite(ctx, level, x, y, radius, alpha = 1, angle = 0, corruptionProgress = 0) {
+const vegetableSpriteCache = new Map();
+
+function corruptionStep(progress) {
+  const value = Number(progress);
+  if (!Number.isFinite(value)) return 0;
+  return clamp(Math.floor(clamp(value, 0, 1) * 10), 0, 10);
+}
+
+function darkenSpritePixels(targetCtx, targetWidth, targetHeight, step) {
+  if (step <= 0) return;
+
+  const corruption = step / 10;
+  const startY = Math.floor(targetHeight * (1 - corruption));
+  const darkness = 0.24 + corruption * 0.58;
+  try {
+    const imageData = targetCtx.getImageData(0, startY, targetWidth, targetHeight - startY);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] === 0) continue;
+      data[i] = Math.round(data[i] * (1 - darkness));
+      data[i + 1] = Math.round(data[i + 1] * (1 - darkness));
+      data[i + 2] = Math.round(data[i + 2] * (1 - darkness));
+    }
+    targetCtx.putImageData(imageData, 0, startY);
+  } catch (error) {
+    console.warn('腐化遮罩繪製失敗', error);
+  }
+}
+
+function getVegetableSprite(level, radius, corruptionProgress = 0) {
   const veg = VEGETABLES[level];
   const image = vegetableImages[level];
-  const corruptionValue = Number(corruptionProgress);
-  const corruption = Number.isFinite(corruptionValue) ? clamp(corruptionValue, 0, 1) : 0;
+  const step = corruptionStep(corruptionProgress);
+  const imageReady = image && image.complete && image.naturalWidth > 0;
+  const cacheKey = `${level}:${Math.round(radius * 10)}:${step}:${imageReady ? 1 : 0}`;
+  const cached = vegetableSpriteCache.get(cacheKey);
+  if (cached) return cached;
 
-  const drawCorruption = (targetCtx, targetWidth, targetHeight) => {
-    if (corruption <= 0) return;
-    const startY = Math.floor(targetHeight * (1 - corruption));
-    const darkness = 0.24 + corruption * 0.58;
-    try {
-      const imageData = targetCtx.getImageData(0, startY, targetWidth, targetHeight - startY);
-      const data = imageData.data;
-      for (let i = 0; i < data.length; i += 4) {
-        if (data[i + 3] === 0) continue;
-        data[i] = Math.round(data[i] * (1 - darkness));
-        data[i + 1] = Math.round(data[i + 1] * (1 - darkness));
-        data[i + 2] = Math.round(data[i + 2] * (1 - darkness));
-      }
-      targetCtx.putImageData(imageData, 0, startY);
-    } catch (error) {
-      console.warn('腐化遮罩繪製失敗', error);
-    }
-  };
+  const bufferSize = Math.ceil(radius * 2.7);
+  const bufferRadius = bufferSize / 2;
+  const buffer = document.createElement('canvas');
+  buffer.width = bufferSize;
+  buffer.height = bufferSize;
+  const bufferCtx = buffer.getContext('2d');
 
-  if (image && image.complete && image.naturalWidth > 0) {
+  if (imageReady) {
     const maxSize = radius * 2.45;
     const scale = Math.min(maxSize / image.naturalWidth, maxSize / image.naturalHeight);
     const width = image.naturalWidth * scale;
     const height = image.naturalHeight * scale;
-    const bufferSize = Math.ceil(radius * 2.7);
-    const bufferRadius = bufferSize / 2;
-    const buffer = document.createElement('canvas');
-    buffer.width = bufferSize;
-    buffer.height = bufferSize;
-    const bufferCtx = buffer.getContext('2d');
     const imageX = bufferRadius - width / 2;
     const imageY = bufferRadius - height / 2;
     const sprite = document.createElement('canvas');
@@ -41,39 +55,40 @@ function drawVegetableSprite(ctx, level, x, y, radius, alpha = 1, angle = 0, cor
     sprite.height = Math.ceil(height);
     const spriteCtx = sprite.getContext('2d');
     spriteCtx.drawImage(image, 0, 0, sprite.width, sprite.height);
-    drawCorruption(spriteCtx, sprite.width, sprite.height);
+    darkenSpritePixels(spriteCtx, sprite.width, sprite.height, step);
     bufferCtx.drawImage(sprite, imageX, imageY, width, height);
-
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.translate(x, y);
-    ctx.rotate(angle);
-    ctx.drawImage(buffer, -bufferRadius, -bufferRadius);
-    ctx.restore();
-    return;
+  } else {
+    bufferCtx.translate(bufferRadius, bufferRadius);
+    bufferCtx.fillStyle = veg.color;
+    bufferCtx.strokeStyle = 'rgba(35, 55, 28, 0.28)';
+    bufferCtx.lineWidth = 2;
+    bufferCtx.beginPath();
+    bufferCtx.arc(0, 0, radius, 0, Math.PI * 2);
+    bufferCtx.fill();
+    bufferCtx.stroke();
+    bufferCtx.setTransform(1, 0, 0, 1, 0, 0);
+    darkenSpritePixels(bufferCtx, bufferSize, bufferSize, step);
   }
 
+  const sprite = {
+    canvas: buffer,
+    radius: bufferRadius
+  };
+  vegetableSpriteCache.set(cacheKey, sprite);
+  if (vegetableSpriteCache.size > 160) {
+    vegetableSpriteCache.delete(vegetableSpriteCache.keys().next().value);
+  }
+
+  return sprite;
+}
+
+function drawVegetableSprite(ctx, level, x, y, radius, alpha = 1, angle = 0, corruptionProgress = 0) {
+  const sprite = getVegetableSprite(level, radius, corruptionProgress);
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(x, y);
   ctx.rotate(angle);
-  const bufferSize = Math.ceil(radius * 2.7);
-  const bufferRadius = bufferSize / 2;
-  const buffer = document.createElement('canvas');
-  buffer.width = bufferSize;
-  buffer.height = bufferSize;
-  const bufferCtx = buffer.getContext('2d');
-  bufferCtx.translate(bufferRadius, bufferRadius);
-  bufferCtx.fillStyle = veg.color;
-  bufferCtx.strokeStyle = 'rgba(35, 55, 28, 0.28)';
-  bufferCtx.lineWidth = 2;
-  bufferCtx.beginPath();
-  bufferCtx.arc(0, 0, radius, 0, Math.PI * 2);
-  bufferCtx.fill();
-  bufferCtx.stroke();
-  bufferCtx.setTransform(1, 0, 0, 1, 0, 0);
-  drawCorruption(bufferCtx, bufferSize, bufferSize);
-  ctx.drawImage(buffer, -bufferRadius, -bufferRadius);
+  ctx.drawImage(sprite.canvas, -sprite.radius, -sprite.radius);
   ctx.restore();
 }
 
@@ -225,7 +240,7 @@ function drawComboImpact(ctx, now) {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.92)';
     ctx.fillStyle = burst.color;
     ctx.shadowColor = burst.color;
-    ctx.shadowBlur = 18;
+    ctx.shadowBlur = 8;
     ctx.strokeText(`COMBO ${burst.combo}`, burst.x, textY);
     ctx.fillText(`COMBO ${burst.combo}`, burst.x, textY);
     ctx.restore();

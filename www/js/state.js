@@ -8,6 +8,8 @@ const runner = Runner.create();
 const state = {
   width: 0,
   height: 0,
+  wallWidth: 0,
+  wallHeight: 0,
   score: 0,
   scoreRemainder: 0,
   bestLevel: 1,
@@ -61,6 +63,8 @@ const audioState = {
   musicBuffer: null,
   musicSource: null,
   musicLoading: null,
+  comboNoiseBuffer: null,
+  comboNoiseSampleRate: 0,
   enabled: localStorage.getItem('veggieMergeSoundEnabled') !== 'false',
   musicVolume: Number(localStorage.getItem('veggieMergeMusicVolume') || localStorage.getItem('veggieMergeVolume') || 0.7),
   sfxVolume: Number(localStorage.getItem('veggieMergeSfxVolume') || 0.85)

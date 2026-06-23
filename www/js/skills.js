@@ -444,13 +444,8 @@ function applyFertilizerToVegetable(target, fertilizer) {
   }
 
   const upgraded = createVegetable(nextLevel, position.x, position.y);
-  const corruptionDuration = corruptionDurationForLevel(nextLevel);
-  upgraded.corruptionElapsed = Number.isFinite(corruptionDuration)
-    ? Math.min(target.corruptionElapsed || 0, corruptionDuration)
-    : 0;
-  upgraded.corruptionProgress = Number.isFinite(corruptionDuration)
-    ? clamp(Math.floor((upgraded.corruptionElapsed / corruptionDuration) * 10) / 10, 0, 1)
-    : 0;
+  upgraded.corruptionElapsed = 0;
+  upgraded.corruptionProgress = 0;
   upgraded.isCorrupted = false;
   Body.setVelocity(upgraded, velocity);
   Body.setAngle(upgraded, angle);

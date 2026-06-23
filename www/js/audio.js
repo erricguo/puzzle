@@ -172,12 +172,6 @@ function playComboImpactSound(combo = 1) {
   punch.stop(now + 0.22);
 
   const burst = context.createBufferSource();
-  const buffer = context.createBuffer(1, Math.floor(context.sampleRate * 0.12), context.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < data.length; i++) {
-    const fade = 1 - i / data.length;
-    data[i] = (Math.random() * 2 - 1) * fade * fade;
-  }
   const filter = context.createBiquadFilter();
   const burstGain = context.createGain();
   filter.type = 'bandpass';
@@ -185,12 +179,29 @@ function playComboImpactSound(combo = 1) {
   filter.Q.value = 5;
   burstGain.gain.setValueAtTime(0.08, now);
   burstGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
-  burst.buffer = buffer;
+  burst.buffer = getComboNoiseBuffer(context);
   burst.connect(filter);
   filter.connect(burstGain);
   burstGain.connect(audioState.sfxGain);
   burst.start(now);
 
+}
+
+function getComboNoiseBuffer(context) {
+  if (audioState.comboNoiseBuffer && audioState.comboNoiseSampleRate === context.sampleRate) {
+    return audioState.comboNoiseBuffer;
+  }
+
+  const buffer = context.createBuffer(1, Math.floor(context.sampleRate * 0.12), context.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    const fade = 1 - i / data.length;
+    data[i] = (Math.random() * 2 - 1) * fade * fade;
+  }
+
+  audioState.comboNoiseBuffer = buffer;
+  audioState.comboNoiseSampleRate = context.sampleRate;
+  return buffer;
 }
 
 function playGameOverSound() {
