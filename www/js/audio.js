@@ -7,7 +7,7 @@ function setupAudioUi() {
 function ensureAudio() {
   if (audioState.context) {
     audioState.context.resume?.();
-    ensureBackgroundMusic();
+    loadBackgroundMusic();
     return audioState.context;
   }
 
@@ -25,19 +25,51 @@ function ensureAudio() {
   audioState.musicGain.connect(audioState.master);
   audioState.sfxGain.connect(audioState.master);
   audioState.master.connect(context.destination);
-  ensureBackgroundMusic();
+  loadBackgroundMusic();
   return context;
 }
 
-function ensureBackgroundMusic() {
-  if (!audioState.context || audioState.musicSource) return;
+function loadBackgroundMusic() {
+  if (!audioState.context || audioState.musicBuffer || audioState.musicLoading) return audioState.musicLoading;
 
-  const music = new Audio(BACKGROUND_MUSIC_SRC);
-  music.loop = true;
-  music.preload = 'auto';
-  audioState.musicElement = music;
-  audioState.musicSource = audioState.context.createMediaElementSource(music);
-  audioState.musicSource.connect(audioState.musicGain);
+  audioState.musicLoading = fetch(BACKGROUND_MUSIC_SRC)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return response.arrayBuffer();
+    })
+    .then((data) => audioState.context.decodeAudioData(data))
+    .then((buffer) => {
+      audioState.musicBuffer = buffer;
+      audioState.musicLoading = null;
+      if (audioState.enabled && state.hasStarted && !state.gameOver) {
+        startMusic();
+      }
+      return buffer;
+    })
+    .catch((error) => {
+      audioState.musicLoading = null;
+      console.warn('背景音樂載入失敗', error);
+      return null;
+    });
+
+  return audioState.musicLoading;
+}
+
+function createMusicSource() {
+  if (!audioState.context || !audioState.musicBuffer || !audioState.musicGain) return null;
+
+  const source = audioState.context.createBufferSource();
+  source.buffer = audioState.musicBuffer;
+  source.loop = true;
+  source.connect(audioState.musicGain);
+  source.onended = () => {
+    if (audioState.musicSource === source) {
+      audioState.musicSource = null;
+    }
+  };
+  return source;
 }
 
 function updateAudioVolume() {
@@ -138,13 +170,25 @@ function playGameOverSound() {
 
 function startMusic() {
   const context = ensureAudio();
-  if (!context || !audioState.musicElement || !audioState.enabled || !state.hasStarted || state.gameOver) return;
+  if (!context || !audioState.enabled || !state.hasStarted || state.gameOver || audioState.musicSource) return;
 
-  audioState.musicElement.play().catch(() => {});
+  if (!audioState.musicBuffer) {
+    loadBackgroundMusic();
+    return;
+  }
+
+  const source = createMusicSource();
+  if (!source) return;
+  audioState.musicSource = source;
+  source.start();
 }
 
 function stopMusic() {
-  if (audioState.musicElement) {
-    audioState.musicElement.pause();
+  if (audioState.musicSource) {
+    const source = audioState.musicSource;
+    audioState.musicSource = null;
+    source.onended = null;
+    source.stop();
+    source.disconnect();
   }
 }

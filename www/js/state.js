@@ -34,8 +34,9 @@ const audioState = {
   master: null,
   musicGain: null,
   sfxGain: null,
-  musicElement: null,
+  musicBuffer: null,
   musicSource: null,
+  musicLoading: null,
   enabled: localStorage.getItem('veggieMergeSoundEnabled') !== 'false',
   volume: Number(localStorage.getItem('veggieMergeVolume') || 0.7)
 };
