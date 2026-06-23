@@ -26,7 +26,7 @@
       <div id="gameOverPanel" class="game-over" hidden>
         <strong>遊戲結束</strong>
         <span id="finalScore">分數 0</span>
-        <span id="finalCombo">Combo 0</span>
+        <span id="finalCombo">最高 Combo 0</span>
         <button id="gameOverLeaderboardButton" type="button">排行榜</button>
         <button id="playAgainButton" type="button">再玩一次</button>
       </div>
@@ -55,7 +55,7 @@
       <div class="start-copy">
         <p>準備好開始了嗎</p>
         <h2>蔬菜合成</h2>
-        <span>拖曳、合併、累積 COMBO，衝出更高分數。</span>
+        <span>合併、累積 COMBO，衝出更高分數。</span>
       </div>
       <div class="start-badges" aria-label="遊戲特色">
         <span>10 種蔬菜</span>
@@ -102,6 +102,15 @@
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="main.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/dom.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/leaderboard.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/hud-combo.js"></script>
+  <script src="js/gameplay.js"></script>
+  <script src="js/rendering.js"></script>
+  <script src="js/events.js"></script>
 </body>
 </html>

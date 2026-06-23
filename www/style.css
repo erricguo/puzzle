@@ -535,8 +535,11 @@ button {
   display: grid;
   place-items: center;
   padding: max(18px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
-  background: rgba(36, 54, 29, 0.34);
-  backdrop-filter: blur(7px);
+  background:
+    radial-gradient(circle at 50% 24%, rgba(255, 218, 79, 0.38), transparent 28%),
+    radial-gradient(circle at 18% 82%, rgba(104, 216, 77, 0.22), transparent 30%),
+    rgba(31, 55, 28, 0.5);
+  backdrop-filter: blur(8px);
 }
 
 .leaderboard-panel {
@@ -546,12 +549,12 @@ button {
   grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   gap: 12px;
   overflow: hidden;
-  border: 1px solid rgba(72, 105, 52, 0.18);
+  border: 3px solid rgba(255, 255, 255, 0.78);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.92), rgba(246, 252, 237, 0.92)),
-    #f7fbef;
-  box-shadow: 0 18px 42px rgba(33, 50, 26, 0.26);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(233, 248, 213, 0.86)),
+    rgba(255, 255, 255, 0.76);
+  box-shadow: 0 8px 0 rgba(49, 94, 35, 0.42), 0 18px 38px rgba(33, 50, 26, 0.28);
   padding: 14px;
 }
 
@@ -569,27 +572,50 @@ button {
 }
 
 .leaderboard-header p {
-  color: #4b8f3d;
+  justify-self: start;
+  width: max-content;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  color: #3d802f;
   font-size: 12px;
   font-weight: 900;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  box-shadow: 0 8px 20px rgba(48, 78, 35, 0.1);
 }
 
 .leaderboard-header h2 {
-  font-size: 28px;
+  margin-top: 8px;
+  width: max-content;
+  padding: 10px 16px;
+  border: 3px solid rgba(255, 255, 255, 0.78);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff8ca 0%, #ffd84d 100%);
+  box-shadow: 0 7px 0 #c89b20, 0 14px 22px rgba(99, 74, 20, 0.18);
+  color: #553911;
+  font-size: 30px;
   line-height: 1;
+  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.65);
 }
 
 .icon-button {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.82);
   border-radius: 8px;
-  background: rgba(45, 70, 35, 0.1);
-  color: #263b20;
+  background: linear-gradient(180deg, #7ac95c 0%, #4b9b37 100%);
+  box-shadow: 0 5px 0 #2f7025, 0 10px 16px rgba(48, 78, 35, 0.18);
+  color: #fff;
   font-size: 26px;
   line-height: 1;
+  text-shadow: 0 1px 0 rgba(23, 63, 19, 0.28);
+}
+
+.icon-button:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #2f7025, 0 6px 11px rgba(48, 78, 35, 0.16);
 }
 
 .account-row {
@@ -597,18 +623,39 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 9px;
+  padding: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
   border-radius: 8px;
-  background: rgba(230, 244, 214, 0.78);
-  color: var(--muted);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(233, 248, 213, 0.78)),
+    rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 -3px 0 rgba(75, 143, 61, 0.12), 0 8px 18px rgba(48, 78, 35, 0.1);
+  color: #46633c;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
+}
+
+.account-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .account-row button {
   flex: 0 0 auto;
-  padding: 7px 10px;
+  padding: 8px 11px;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  background: linear-gradient(180deg, #54d6c9 0%, #2c9a91 100%);
+  box-shadow: 0 5px 0 #1d6f69, 0 10px 14px rgba(31, 111, 105, 0.16);
   font-size: 12px;
+  text-shadow: 0 1px 0 rgba(23, 63, 19, 0.18);
+}
+
+.account-row button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+  transform: none;
 }
 
 .leaderboard-tabs {
@@ -618,14 +665,19 @@ button {
 }
 
 .leaderboard-tabs button {
-  background: rgba(45, 70, 35, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(230, 244, 214, 0.86));
+  box-shadow: 0 5px 0 rgba(49, 94, 35, 0.22), 0 10px 14px rgba(48, 78, 35, 0.1);
   color: #315d29;
+  font-size: 14px;
 }
 
 .leaderboard-tabs button.active {
-  background: #4b8f3d;
+  background: linear-gradient(180deg, #7ac95c 0%, #4b9b37 100%);
   color: #fff;
-  box-shadow: 0 8px 18px rgba(75, 143, 61, 0.22);
+  box-shadow: 0 5px 0 #2f7025, 0 10px 16px rgba(48, 78, 35, 0.18);
+  text-shadow: 0 1px 0 rgba(23, 63, 19, 0.28);
 }
 
 .leaderboard-list {
@@ -645,9 +697,11 @@ button {
   gap: 10px;
   align-items: center;
   padding: 10px;
-  border: 1px solid rgba(72, 105, 52, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.72);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(247, 252, 237, 0.86));
+  box-shadow: inset 0 -2px 0 rgba(75, 143, 61, 0.08), 0 7px 14px rgba(48, 78, 35, 0.08);
 }
 
 .leaderboard-item .rank {
@@ -656,7 +710,9 @@ button {
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: #ffda4f;
+  border: 2px solid rgba(255, 255, 255, 0.68);
+  background: linear-gradient(180deg, #fff8ca 0%, #ffd84d 100%);
+  box-shadow: 0 3px 0 #c89b20;
   color: #4f3a13;
   font-weight: 900;
 }
@@ -681,6 +737,7 @@ button {
 .leaderboard-item .metric {
   display: grid;
   justify-items: end;
+  min-width: 64px;
   color: #20311e;
   font-size: 22px;
   font-weight: 900;
@@ -689,10 +746,17 @@ button {
 
 .leaderboard-message {
   min-height: 18px;
-  color: var(--muted);
+  justify-self: center;
+  width: max-content;
+  max-width: 100%;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.68);
+  color: #46633c;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
   text-align: center;
+  box-shadow: 0 8px 18px rgba(48, 78, 35, 0.08);
 }
 
 @media (max-width: 360px) {
