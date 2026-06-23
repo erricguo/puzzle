@@ -32,16 +32,21 @@ function getVegetableSprite(level, radius, corruptionProgress = 0) {
   const image = vegetableImages[level];
   const step = corruptionStep(corruptionProgress);
   const imageReady = image && image.complete && image.naturalWidth > 0;
-  const cacheKey = `${level}:${Math.round(radius * 10)}:${step}:${imageReady ? 1 : 0}`;
+  const pixelRatio = render.options.pixelRatio || 1;
+  const cacheKey = `${level}:${Math.round(radius * 10)}:${step}:${imageReady ? 1 : 0}:${pixelRatio}`;
   const cached = vegetableSpriteCache.get(cacheKey);
   if (cached) return cached;
 
   const bufferSize = Math.ceil(radius * 2.7);
+  const scaledBufferSize = Math.ceil(bufferSize * pixelRatio);
   const bufferRadius = bufferSize / 2;
   const buffer = document.createElement('canvas');
-  buffer.width = bufferSize;
-  buffer.height = bufferSize;
+  buffer.width = scaledBufferSize;
+  buffer.height = scaledBufferSize;
   const bufferCtx = buffer.getContext('2d');
+  bufferCtx.imageSmoothingEnabled = true;
+  bufferCtx.imageSmoothingQuality = 'high';
+  bufferCtx.scale(pixelRatio, pixelRatio);
 
   if (imageReady) {
     const maxSize = radius * 2.45;
@@ -51,9 +56,11 @@ function getVegetableSprite(level, radius, corruptionProgress = 0) {
     const imageX = bufferRadius - width / 2;
     const imageY = bufferRadius - height / 2;
     const sprite = document.createElement('canvas');
-    sprite.width = Math.ceil(width);
-    sprite.height = Math.ceil(height);
+    sprite.width = Math.ceil(width * pixelRatio);
+    sprite.height = Math.ceil(height * pixelRatio);
     const spriteCtx = sprite.getContext('2d');
+    spriteCtx.imageSmoothingEnabled = true;
+    spriteCtx.imageSmoothingQuality = 'high';
     spriteCtx.drawImage(image, 0, 0, sprite.width, sprite.height);
     darkenSpritePixels(spriteCtx, sprite.width, sprite.height, step);
     bufferCtx.drawImage(sprite, imageX, imageY, width, height);
@@ -67,12 +74,13 @@ function getVegetableSprite(level, radius, corruptionProgress = 0) {
     bufferCtx.fill();
     bufferCtx.stroke();
     bufferCtx.setTransform(1, 0, 0, 1, 0, 0);
-    darkenSpritePixels(bufferCtx, bufferSize, bufferSize, step);
+    darkenSpritePixels(bufferCtx, scaledBufferSize, scaledBufferSize, step);
   }
 
   const sprite = {
     canvas: buffer,
-    radius: bufferRadius
+    radius: bufferRadius,
+    size: bufferSize
   };
   vegetableSpriteCache.set(cacheKey, sprite);
   if (vegetableSpriteCache.size > 160) {
@@ -88,7 +96,7 @@ function drawVegetableSprite(ctx, level, x, y, radius, alpha = 1, angle = 0, cor
   ctx.globalAlpha = alpha;
   ctx.translate(x, y);
   ctx.rotate(angle);
-  ctx.drawImage(sprite.canvas, -sprite.radius, -sprite.radius);
+  ctx.drawImage(sprite.canvas, -sprite.radius, -sprite.radius, sprite.size, sprite.size);
   ctx.restore();
 }
 
@@ -362,6 +370,8 @@ function updateFpsMeter(now) {
 function drawGameOverlay() {
   const ctx = render.context;
   const now = performance.now();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   updateFpsMeter(now);
   const shakeProgress = Math.max(0, 1 - (now - state.comboPulseStartedAt) / COMBO_SHAKE_DURATION);
   const shakeStrength = Math.min(16, 4 + state.combo * 0.55) * shakeProgress * shakeProgress;

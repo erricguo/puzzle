@@ -23,13 +23,26 @@ function comboColor(combo) {
   return COMBO_COLORS[Math.max(0, combo - 1) % COMBO_COLORS.length];
 }
 
+function comboScoreMultiplier(combo) {
+  return combo > 0 ? 1 + (combo + state.comboScoreBonus) * 0.4 : 1;
+}
+
 function scoreWithComboBonus(baseScore, combo) {
-  const rawScore = baseScore * (1 + (combo + state.comboScoreBonus) * 0.01);
+  const rawScore = baseScore * comboScoreMultiplier(combo);
   const wholeScore = Math.floor(rawScore);
   state.scoreRemainder += rawScore - wholeScore;
   const carriedScore = Math.floor(state.scoreRemainder);
   state.scoreRemainder -= carriedScore;
   return wholeScore + carriedScore;
+}
+
+function experienceWithComboBonus(baseExperience, combo) {
+  const rawExperience = baseExperience * comboScoreMultiplier(combo);
+  const wholeExperience = Math.floor(rawExperience);
+  state.expRemainder += rawExperience - wholeExperience;
+  const carriedExperience = Math.floor(state.expRemainder);
+  state.expRemainder -= carriedExperience;
+  return wholeExperience + carriedExperience;
 }
 
 function clearExpiredCombo(now = performance.now()) {

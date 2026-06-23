@@ -48,6 +48,14 @@ function resizeGame() {
   state.dangerY = Math.max(112, Math.min(152, Math.round(state.height * 0.22)));
   state.aimX = state.aimX || state.width / 2;
 
+  const nextPixelRatio = Math.min(window.devicePixelRatio || 1, 3);
+  if (render.options.pixelRatio !== nextPixelRatio) {
+    render.options.pixelRatio = nextPixelRatio;
+    if (typeof Render.setPixelRatio === 'function') {
+      Render.setPixelRatio(render, nextPixelRatio);
+    }
+  }
+
   if (typeof Render.setSize === 'function') {
     Render.setSize(render, state.width, state.height);
   } else {
@@ -78,7 +86,7 @@ function vegetableOptions(level) {
   const veg = VEGETABLES[level];
   return {
     restitution: 0.36,
-    friction: 0.035,
+    friction: 0.025,
     frictionAir: 0.002,
     density: 0.0011 + level * 0.00008,
     label: 'vegetable',
@@ -230,7 +238,7 @@ function mergeVegetables(a, b) {
     pushComboBurst(midpoint.x, midpoint.y, combo);
     playMergeSound(combo, nextLevel);
     state.score += scoreWithComboBonus(nextLevel + 1, combo);
-    gainExperience(nextLevel + 1);
+    gainExperience(nextLevel + 1, combo);
     updateHud();
   });
 }

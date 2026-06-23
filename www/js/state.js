@@ -1,7 +1,7 @@
 const engine = Engine.create({
-  gravity: { x: 0, y: 1.05 }
+  gravity: { x: 0, y: 1.365 }
 });
-const BASE_GRAVITY_Y = 1.05;
+const BASE_GRAVITY_Y = 1.365;
 const world = engine.world;
 const runner = Runner.create();
 
@@ -12,6 +12,7 @@ const state = {
   wallHeight: 0,
   score: 0,
   scoreRemainder: 0,
+  expRemainder: 0,
   fpsValue: 0,
   fpsFrames: 0,
   fpsLastAt: 0,
@@ -117,6 +118,6 @@ const render = Render.create({
     height: 640,
     background: 'transparent',
     wireframes: false,
-    pixelRatio: Math.min(window.devicePixelRatio || 1, 2)
+    pixelRatio: Math.min(window.devicePixelRatio || 1, 3)
   }
 });

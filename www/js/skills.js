@@ -39,7 +39,7 @@ const SKILL_POOL = [
     id: 'combo_score',
     name: 'Combo 強化',
     type: '永久',
-    description: 'COMBO 分數永久 +1。',
+    description: 'COMBO 分數加成永久 +40%。',
     apply: () => {
       state.comboScoreBonus += 1;
     }
@@ -75,10 +75,10 @@ function expRequiredForLevel(level) {
   return EXP_BASE_REQUIREMENT + (level - 1) * EXP_GROWTH_PER_LEVEL;
 }
 
-function gainExperience(amount) {
+function gainExperience(amount, combo = 0) {
   if (!amount || state.gameOver) return;
 
-  state.exp += amount;
+  state.exp += experienceWithComboBonus(amount, combo);
   while (state.exp >= state.expToNext) {
     state.exp -= state.expToNext;
     state.playerLevel += 1;
@@ -109,7 +109,6 @@ function maybeShowSkillPanel() {
   state.suppressDropUntil = performance.now() + 1000;
   pausePanel.hidden = true;
   pauseButton.textContent = '繼續';
-  stopMusic();
 
   skillPanelKicker.textContent = `等級 ${state.playerLevel}`;
   state.skillRefreshesRemaining = 1;
@@ -142,6 +141,7 @@ function debugAddLevels(levels = 10) {
 
   state.playerLevel = toLevel;
   state.exp = 0;
+  state.expRemainder = 0;
   state.expToNext = expRequiredForLevel(state.playerLevel);
   updateHud();
   closeDebugPanel();
@@ -267,13 +267,18 @@ async function requestSkillRefreshAd() {
   state.skillRefreshAdBusy = true;
   updateRefreshSkillButton();
 
-  const rewarded = await showRewardedSkillRefreshAd();
-  state.skillRefreshAdBusy = false;
-
-  if (rewarded) {
-    state.skillRefreshesRemaining = 1;
+  try {
+    const rewarded = await showRewardedSkillRefreshAd();
+    if (rewarded) {
+      state.skillRefreshesRemaining = 1;
+    }
+  } catch (error) {
+    console.warn('廣告載入失敗', error);
+    window.alert?.(`廣告目前無法顯示：${error?.message || '請稍後再試'}`);
+  } finally {
+    state.skillRefreshAdBusy = false;
+    updateRefreshSkillButton();
   }
-  updateRefreshSkillButton();
 }
 
 async function showRewardedSkillRefreshAd() {
@@ -459,7 +464,7 @@ function applyFertilizerToVegetable(target, fertilizer) {
     level: nextLevel
   });
   playMergeSound(Math.max(1, state.combo), nextLevel);
-  gainExperience(nextLevel + 1);
+  gainExperience(nextLevel + 1, state.combo);
   updateHud();
   return true;
 }
@@ -514,6 +519,7 @@ function blastRadiusFor(body) {
 function resetSkillState() {
   state.playerLevel = 1;
   state.exp = 0;
+  state.expRemainder = 0;
   state.expToNext = expRequiredForLevel(1);
   state.corruptionActive = false;
   state.corruptionLastAt = 0;
