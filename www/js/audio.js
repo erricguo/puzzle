@@ -5,6 +5,7 @@ function setupAudioUi() {
   soundButton.classList.toggle('muted', !audioState.enabled);
   updateSliderFill(musicVolumeSlider);
   updateSliderFill(sfxVolumeSlider);
+  updateHapticsUi();
 }
 
 function ensureAudio() {
@@ -102,6 +103,18 @@ function updateSliderFill(slider) {
   slider.style.setProperty('--value', `${percent}%`);
 }
 
+function updateHapticsUi() {
+  vibrationToggle.classList.toggle('active', hapticsState.enabled);
+  vibrationToggle.setAttribute('aria-checked', String(hapticsState.enabled));
+  vibrationToggle.setAttribute('aria-label', hapticsState.enabled ? '關閉震動效果' : '開啟震動效果');
+  localStorage.setItem('veggieMergeHapticsEnabled', String(hapticsState.enabled));
+}
+
+function vibrate(pattern) {
+  if (!hapticsState.enabled) return;
+  navigator.vibrate?.(pattern);
+}
+
 function makeOsc({ frequency, type = 'sine', gain = 0.2, start = 0, duration = 0.2, target = null }) {
   const context = ensureAudio();
   const output = target || audioState.sfxGain;
@@ -140,6 +153,8 @@ function playMergeSound(combo = 1, level = 0) {
 }
 
 function playComboImpactSound(combo = 1) {
+  vibrate(Math.min(80, 24 + combo * 3));
+
   const context = ensureAudio();
   if (!context || !audioState.enabled) return;
 
@@ -176,7 +191,6 @@ function playComboImpactSound(combo = 1) {
   burstGain.connect(audioState.sfxGain);
   burst.start(now);
 
-  navigator.vibrate?.(Math.min(80, 24 + combo * 3));
 }
 
 function playGameOverSound() {

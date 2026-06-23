@@ -199,11 +199,14 @@ function renderLeaderboard() {
   rows.forEach((row, index) => {
     const item = document.createElement('li');
     item.className = 'leaderboard-item';
+    const detailText = leaderboardState.activeTab === 'combo'
+      ? `最高 Combo ${row.best_combo || 0} · ${formatDate(row.created_at)}`
+      : `最高層 ${row.best_level || 1} · ${formatDate(row.created_at)}`;
     item.innerHTML = `
       <span class="rank">${index + 1}</span>
       <span class="player">
         <strong>${escapeHtml(row.player_name || '匿名玩家')}</strong>
-        <small>最高層 ${row.best_level || 1} · ${formatDate(row.created_at)}</small>
+        <small>${escapeHtml(detailText)}</small>
       </span>
       <span class="metric">${row[metricKey] || 0}<small>${metricLabel}</small></span>
     `;

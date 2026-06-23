@@ -29,6 +29,10 @@ render.canvas.addEventListener('contextmenu', showDebugSkillChoices);
 skillPanel.addEventListener('pointerdown', stopSkillPanelBackdropEvent);
 skillPanel.addEventListener('pointerup', stopSkillPanelBackdropEvent);
 skillPanel.addEventListener('click', stopSkillPanelBackdropEvent);
+refreshSkillButton.addEventListener('click', (event) => {
+  event.stopPropagation();
+  refreshSkillCards();
+});
 startButton.addEventListener('click', startGame);
 startScene.addEventListener('click', startGame);
 startLeaderboardButton.addEventListener('click', (event) => {
@@ -70,6 +74,12 @@ sfxVolumeSlider.addEventListener('input', () => {
   }
   updateAudioVolume();
   playClickSound();
+});
+vibrationToggle.addEventListener('click', () => {
+  hapticsState.enabled = !hapticsState.enabled;
+  updateHapticsUi();
+  playClickSound();
+  vibrate(28);
 });
 restartButton.addEventListener('click', resetGame);
 playAgainButton.addEventListener('click', resetGame);

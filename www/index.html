@@ -19,7 +19,7 @@
       </div>
       <div class="stats">
         <span id="score">分數 0</span>
-        <span id="bestLevel">最高等級 1</span>
+        <span id="bestLevel">最高 Combo 0</span>
         <span id="playerLevel">Lv 1</span>
       </div>
       <button id="pauseButton" type="button" aria-label="暫停遊戲">暫停</button>
@@ -47,6 +47,10 @@
             <span>音效</span>
             <input id="sfxVolumeSlider" type="range" min="0" max="100" value="85" aria-label="音效音量" />
           </label>
+          <button id="vibrationToggle" class="haptic-toggle" type="button" role="switch" aria-checked="true">
+            <span>震動效果</span>
+            <span class="toggle-pill" aria-hidden="true"></span>
+          </button>
         </div>
         <button id="resumeButton" class="resume-button" type="button">繼續遊戲</button>
         <button id="restartButton" class="quiet-button" type="button" aria-label="重新開始">重新開始</button>
@@ -57,6 +61,7 @@
           <strong>選擇技能</strong>
           <span>技能可以重複選擇並疊加效果。</span>
           <div id="skillCards" class="skill-cards" aria-label="技能選項"></div>
+          <button id="refreshSkillButton" class="refresh-skill-button" type="button">刷新卡片 1 次</button>
         </div>
       </div>
     </section>
@@ -115,6 +120,7 @@
       anonKey: 'sb_publishable_XqjQcP1ct0RQywqQJJ-brw_oPRXTZC-'
     };
   </script>
+  <script src="capacitor.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
@@ -122,6 +128,7 @@
   <script src="js/utils.js"></script>
   <script src="js/state.js"></script>
   <script src="js/leaderboard.js"></script>
+  <script src="js/ads.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/hud-combo.js"></script>
   <script src="js/skills.js"></script>

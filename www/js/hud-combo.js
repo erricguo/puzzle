@@ -7,7 +7,7 @@ function setNextLevel() {
 
 function updateHud() {
   scoreEl.textContent = `分數 ${state.score}`;
-  bestLevelEl.textContent = `最高 ${state.bestLevel}`;
+  bestLevelEl.textContent = `最高 Combo ${state.bestCombo}`;
   playerLevelEl.textContent = `Lv ${state.playerLevel} ${state.exp}/${state.expToNext}`;
   expFillEl.style.width = `${clamp((state.exp / state.expToNext) * 100, 0, 100)}%`;
   finalScoreEl.textContent = `分數 ${state.score}`;

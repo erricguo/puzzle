@@ -328,6 +328,84 @@ button {
   box-shadow: 0 4px 0 #b84b20, 0 8px 12px rgba(126, 73, 28, 0.18);
 }
 
+.audio-controls .haptic-toggle {
+  min-width: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 10px 9px 13px;
+  border: 2px solid rgba(255, 255, 255, 0.86);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(246, 252, 237, 0.8));
+  box-shadow: inset 0 -2px 0 rgba(75, 143, 61, 0.1), 0 5px 0 rgba(49, 94, 35, 0.2);
+  color: #46633c;
+  font-size: 13px;
+  text-align: left;
+  text-shadow: none;
+}
+
+.audio-controls .haptic-toggle:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 -1px 0 rgba(75, 143, 61, 0.1), 0 3px 0 rgba(49, 94, 35, 0.2);
+}
+
+.audio-controls .haptic-toggle span {
+  width: auto;
+  max-width: none;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  box-shadow: none;
+}
+
+.audio-controls .haptic-toggle > span:first-child {
+  font-weight: 900;
+}
+
+.audio-controls .haptic-toggle .toggle-pill {
+  position: relative;
+  flex: 0 0 auto;
+  width: 52px;
+  min-width: 52px;
+  height: 28px;
+  border: 2px solid rgba(255, 255, 255, 0.88);
+  border-radius: 999px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #aeb8a7 0%, #7d8d75 100%);
+  box-shadow: inset 0 2px 4px rgba(41, 64, 34, 0.2), 0 3px 0 rgba(93, 108, 88, 0.45);
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.audio-controls .haptic-toggle .toggle-pill::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fff 0%, #f5ffe7 100%);
+  box-shadow: 0 3px 0 rgba(49, 94, 35, 0.2), 0 5px 8px rgba(48, 78, 35, 0.18);
+  transition: transform 160ms ease;
+}
+
+.audio-controls .haptic-toggle.active {
+  color: #315d29;
+}
+
+.audio-controls .haptic-toggle.active .toggle-pill {
+  background: linear-gradient(180deg, #7ac95c 0%, #4b9b37 100%);
+  box-shadow: inset 0 2px 4px rgba(41, 64, 34, 0.16), 0 3px 0 #2f7025;
+}
+
+.audio-controls .haptic-toggle.active .toggle-pill::after {
+  transform: translateX(24px);
+}
+
 .game-over {
   position: absolute;
   inset: 0;
@@ -539,6 +617,42 @@ button {
   font-size: 12px;
   font-weight: 800;
   line-height: 1.35;
+}
+
+.refresh-skill-button {
+  justify-self: center;
+  min-width: min(72vw, 260px);
+  padding: 11px 16px;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(230, 244, 214, 0.86));
+  box-shadow: 0 6px 0 rgba(49, 94, 35, 0.24), 0 12px 18px rgba(48, 78, 35, 0.12);
+  color: #315d29;
+  font-size: 15px;
+  font-weight: 900;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.refresh-skill-button:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 rgba(49, 94, 35, 0.24), 0 8px 12px rgba(48, 78, 35, 0.1);
+}
+
+.refresh-skill-button.used,
+.refresh-skill-button:disabled {
+  cursor: default;
+  background: linear-gradient(180deg, rgba(235, 241, 229, 0.86), rgba(206, 218, 198, 0.82));
+  box-shadow: inset 0 -2px 0 rgba(75, 143, 61, 0.08), 0 4px 0 rgba(94, 108, 88, 0.22);
+  color: #7a8874;
+  transform: none;
+}
+
+.refresh-skill-button.ad-ready {
+  cursor: pointer;
+  background: linear-gradient(180deg, #fff8ca 0%, #ffd84d 100%);
+  box-shadow: 0 6px 0 #c89b20, 0 12px 18px rgba(99, 74, 20, 0.14);
+  color: #553911;
 }
 
 .game-over strong {

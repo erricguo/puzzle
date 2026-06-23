@@ -32,6 +32,9 @@ const state = {
   expToNext: 12,
   pendingSkillChoices: 0,
   isChoosingSkill: false,
+  skillRefreshesRemaining: 0,
+  skillRefreshAdBusy: false,
+  currentSkillChoiceIds: [],
   selectedSkills: [],
   comboScoreBonus: 0,
   dropSpeedBonus: 0,
@@ -58,6 +61,9 @@ const audioState = {
   enabled: localStorage.getItem('veggieMergeSoundEnabled') !== 'false',
   musicVolume: Number(localStorage.getItem('veggieMergeMusicVolume') || localStorage.getItem('veggieMergeVolume') || 0.7),
   sfxVolume: Number(localStorage.getItem('veggieMergeSfxVolume') || 0.85)
+};
+const hapticsState = {
+  enabled: localStorage.getItem('veggieMergeHapticsEnabled') !== 'false'
 };
 const leaderboardState = {
   activeTab: 'score',

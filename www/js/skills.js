@@ -112,7 +112,9 @@ function maybeShowSkillPanel() {
   stopMusic();
 
   skillPanelKicker.textContent = `等級 ${state.playerLevel}`;
-  renderSkillCards(pickSkillOptions(available));
+  state.skillRefreshesRemaining = 1;
+  setSkillChoices(pickSkillOptions(available));
+  updateRefreshSkillButton();
   skillPanel.hidden = false;
 }
 
@@ -127,6 +129,17 @@ function showDebugSkillChoices(event) {
 function pickSkillOptions(skills) {
   const shuffled = [...skills].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, SKILL_CHOICES_PER_PICK);
+}
+
+function pickRefreshedSkillOptions(available) {
+  const currentIds = new Set(state.currentSkillChoiceIds);
+  const alternates = available.filter((skill) => !currentIds.has(skill.id));
+  if (!alternates.length) return pickSkillOptions(available);
+
+  const guaranteedNew = pickSkillOptions(alternates).slice(0, 1);
+  const remaining = available.filter((skill) => skill.id !== guaranteedNew[0].id);
+  return [...guaranteedNew, ...pickSkillOptions(remaining).slice(0, SKILL_CHOICES_PER_PICK - 1)]
+    .sort(() => Math.random() - 0.5);
 }
 
 function availableSkills() {
@@ -144,6 +157,11 @@ function maxStacksForSkill(skill) {
 
 function skillPickCount(skillId) {
   return state.selectedSkills.filter((id) => id === skillId).length;
+}
+
+function setSkillChoices(skills) {
+  state.currentSkillChoiceIds = skills.map((skill) => skill.id);
+  renderSkillCards(skills);
 }
 
 function renderSkillCards(skills) {
@@ -171,6 +189,76 @@ function renderSkillCards(skills) {
   });
 }
 
+function updateRefreshSkillButton() {
+  const hasAlternateChoices = availableSkills().length > SKILL_CHOICES_PER_PICK;
+  const canFreeRefresh = state.skillRefreshesRemaining > 0 && hasAlternateChoices;
+  const canAdRefresh = state.skillRefreshesRemaining <= 0 && hasAlternateChoices && !state.skillRefreshAdBusy;
+  refreshSkillButton.disabled = state.skillRefreshAdBusy || !hasAlternateChoices;
+  refreshSkillButton.textContent = state.skillRefreshAdBusy
+    ? '廣告準備中...'
+    : state.skillRefreshesRemaining > 0 && !hasAlternateChoices
+    ? '沒有可刷新卡片'
+    : state.skillRefreshesRemaining > 0
+      ? '刷新卡片'
+      : '已刷新，看廣告再刷新';
+  refreshSkillButton.classList.toggle('used', !canFreeRefresh);
+  refreshSkillButton.classList.toggle('ad-ready', canAdRefresh);
+}
+
+function refreshSkillCards() {
+  if (state.skillRefreshAdBusy) return;
+  if (state.skillRefreshesRemaining <= 0) {
+    requestSkillRefreshAd();
+    return;
+  }
+
+  const available = availableSkills();
+  if (available.length <= SKILL_CHOICES_PER_PICK) {
+    state.skillRefreshesRemaining = 0;
+    updateRefreshSkillButton();
+    return;
+  }
+
+  state.skillRefreshesRemaining -= 1;
+  setSkillChoices(pickRefreshedSkillOptions(available));
+  updateRefreshSkillButton();
+  playClickSound();
+}
+
+async function requestSkillRefreshAd() {
+  const available = availableSkills();
+  if (available.length <= SKILL_CHOICES_PER_PICK) {
+    updateRefreshSkillButton();
+    return;
+  }
+
+  state.skillRefreshAdBusy = true;
+  updateRefreshSkillButton();
+
+  const rewarded = await showRewardedSkillRefreshAd();
+  state.skillRefreshAdBusy = false;
+
+  if (rewarded) {
+    state.skillRefreshesRemaining = 1;
+  }
+  updateRefreshSkillButton();
+}
+
+async function showRewardedSkillRefreshAd() {
+  const adBridge = window.VeggieMergeAds?.showRewardedRefreshAd;
+  if (typeof adBridge === 'function') {
+    try {
+      return await adBridge({ placement: 'skill_refresh' }) === true;
+    } catch (error) {
+      console.warn('技能刷新廣告播放失敗', error);
+      return false;
+    }
+  }
+
+  window.alert?.('廣告尚未設定：請接入 window.VeggieMergeAds.showRewardedRefreshAd()，並在完整看完廣告後回傳 true。');
+  return false;
+}
+
 function chooseSkill(skillId) {
   const skill = SKILL_POOL.find((item) => item.id === skillId);
   if (!skill || isSkillMaxed(skill)) return;
@@ -180,6 +268,9 @@ function chooseSkill(skillId) {
   state.selectedSkills.push(skillId);
   cancelAiming();
   state.suppressDropUntil = performance.now() + 320;
+  state.skillRefreshesRemaining = 0;
+  state.skillRefreshAdBusy = false;
+  state.currentSkillChoiceIds = [];
   playClickSound();
   closeSkillPanel();
 }
@@ -391,6 +482,9 @@ function resetSkillState() {
   state.expToNext = expRequiredForLevel(1);
   state.pendingSkillChoices = 0;
   state.isChoosingSkill = false;
+  state.skillRefreshesRemaining = 0;
+  state.skillRefreshAdBusy = false;
+  state.currentSkillChoiceIds = [];
   state.selectedSkills = [];
   state.comboScoreBonus = 0;
   state.dropSpeedBonus = 0;
@@ -404,5 +498,6 @@ function resetSkillState() {
   fertilizerEffects.length = 0;
   skillPanel.hidden = true;
   skillCardsEl.replaceChildren();
+  updateRefreshSkillButton();
   updateGravity();
 }
