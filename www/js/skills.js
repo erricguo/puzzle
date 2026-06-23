@@ -6,7 +6,12 @@ const BLAST_RADIUS_MULTIPLIER = 2.15;
 const BLAST_MIN_RADIUS = 48;
 const BLAST_MAX_RADIUS = 150;
 const BLAST_ANIMATION_DURATION = 520;
+const FERTILIZER_ANIMATION_DURATION = 620;
+const FERTILIZER_IMAGE_SRC = 'assets/images/fertilizer.png';
 const PERMANENT_SKILL_MAX_STACKS = 5;
+
+const fertilizerImage = new Image();
+fertilizerImage.src = FERTILIZER_IMAGE_SRC;
 
 const SKILL_POOL = [
   {
@@ -55,6 +60,14 @@ const SKILL_POOL = [
     type: '立即',
     description: '隨機炸裂三個蔬菜，附近蔬菜也會消失。',
     apply: blastRandomVegetables
+  },
+  {
+    id: 'fertilizer',
+    name: '肥料',
+    type: '道具',
+    description: '接下來 5 次投放改為肥料，被砸到的蔬菜會進階。',
+    imageSrc: FERTILIZER_IMAGE_SRC,
+    apply: activateFertilizerMode
   }
 ];
 
@@ -116,11 +129,16 @@ function pickSkillOptions(skills) {
 }
 
 function availableSkills() {
-  return SKILL_POOL.filter((skill) => !isPermanentSkillMaxed(skill));
+  return SKILL_POOL.filter((skill) => !isSkillMaxed(skill));
 }
 
-function isPermanentSkillMaxed(skill) {
-  return skill.type === '永久' && skillPickCount(skill.id) >= PERMANENT_SKILL_MAX_STACKS;
+function isSkillMaxed(skill) {
+  return skillPickCount(skill.id) >= maxStacksForSkill(skill);
+}
+
+function maxStacksForSkill(skill) {
+  if (skill.maxStacks) return skill.maxStacks;
+  return skill.type === '永久' ? PERMANENT_SKILL_MAX_STACKS : Infinity;
 }
 
 function skillPickCount(skillId) {
@@ -133,10 +151,12 @@ function renderSkillCards(skills) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'skill-card';
-    const stacks = skill.type === '永久' ? skillPickCount(skill.id) : 0;
-    const stackLabel = stacks ? ` ${stacks}/${PERMANENT_SKILL_MAX_STACKS}` : '';
+    const maxStacks = maxStacksForSkill(skill);
+    const stacks = Number.isFinite(maxStacks) ? skillPickCount(skill.id) : 0;
+    const stackLabel = stacks ? ` ${stacks}/${maxStacks}` : '';
     button.innerHTML = `
       <small>${escapeHtml(skill.type)}${stackLabel}</small>
+      ${skill.imageSrc ? `<img src="${escapeHtml(skill.imageSrc)}" alt="" />` : ''}
       <strong>${escapeHtml(skill.name)}</strong>
       <span>${escapeHtml(skill.description)}</span>
     `;
@@ -147,10 +167,11 @@ function renderSkillCards(skills) {
 
 function chooseSkill(skillId) {
   const skill = SKILL_POOL.find((item) => item.id === skillId);
-  if (!skill || isPermanentSkillMaxed(skill)) return;
+  if (!skill || isSkillMaxed(skill)) return;
 
+  const applied = skill.apply();
+  if (applied === false) return;
   state.selectedSkills.push(skillId);
-  skill.apply();
   playClickSound();
   closeSkillPanel();
 }
@@ -252,6 +273,56 @@ function blastRandomVegetables() {
   updateHud();
 }
 
+function activateFertilizerMode() {
+  state.fertilizerCharges += 5;
+  state.aiming = false;
+  state.pointerId = null;
+  setNextLevel();
+  updateHud();
+}
+
+function applyFertilizerToVegetable(target, fertilizer) {
+  if (!target || target.isMerging || target.isBlasting || target.vegLevel >= VEGETABLES.length - 1) return false;
+
+  const nextLevel = target.vegLevel + 1;
+  const position = { x: target.position.x, y: target.position.y };
+  const velocity = { x: target.velocity.x, y: target.velocity.y };
+  const angle = target.angle;
+  const angularVelocity = target.angularVelocity;
+
+  target.isMerging = true;
+  Composite.remove(world, target);
+  if (fertilizer) {
+    consumeFertilizer(fertilizer);
+  }
+
+  const upgraded = createVegetable(nextLevel, position.x, position.y);
+  Body.setVelocity(upgraded, velocity);
+  Body.setAngle(upgraded, angle);
+  Body.setAngularVelocity(upgraded, angularVelocity + 0.18);
+
+  const now = performance.now();
+  fertilizerEffects.push({
+    x: position.x,
+    y: position.y,
+    startedAt: now,
+    level: nextLevel
+  });
+  playMergeSound(Math.max(1, state.combo), nextLevel);
+  gainExperience(nextLevel + 1);
+  updateHud();
+  return true;
+}
+
+function consumeFertilizer(fertilizer) {
+  if (!fertilizer || fertilizer.isConsumed) return;
+
+  fertilizer.isConsumed = true;
+  Composite.remove(world, fertilizer);
+  setNextLevel();
+  updateHud();
+}
+
 function isBlastEligible(body, now = performance.now()) {
   return now >= body.canTriggerDangerAt;
 }
@@ -303,8 +374,10 @@ function resetSkillState() {
   state.comboFreezeExpiresAt = 0;
   state.comboFreezeLastAt = 0;
   state.doubleDropExpiresAt = 0;
+  state.fertilizerCharges = 0;
   state.activeSkillLevel = 0;
   blastEffects.length = 0;
+  fertilizerEffects.length = 0;
   skillPanel.hidden = true;
   skillCardsEl.replaceChildren();
   updateGravity();

@@ -95,10 +95,39 @@ function createVegetable(level, x, y) {
   return body;
 }
 
+function createFertilizer(x, y) {
+  const body = Bodies.circle(x, y, 18, {
+    restitution: 0.22,
+    friction: 0.04,
+    frictionAir: 0.002,
+    density: 0.001,
+    label: 'fertilizer',
+    render: { visible: false }
+  });
+  body.spawnedAt = performance.now();
+  body.isConsumed = false;
+  Composite.add(world, body);
+  return body;
+}
+
 function dropVegetable() {
   if (!state.hasStarted || state.paused || state.gameOver) return;
   const now = performance.now();
   if (now - state.lastDropAt < dropCooldownFor(now)) return;
+
+  if (state.fertilizerCharges > 0) {
+    const x = clamp(state.aimX, 26, state.width - 26);
+    const fertilizer = createFertilizer(x, 72);
+    Body.setVelocity(fertilizer, { x: (Math.random() - 0.5) * 0.9, y: 0 });
+    Body.setAngle(fertilizer, (Math.random() - 0.5) * 0.5);
+    Body.setAngularVelocity(fertilizer, (Math.random() - 0.5) * 0.18);
+    state.fertilizerCharges = Math.max(0, state.fertilizerCharges - 1);
+    playDropSound(2);
+    state.lastDropAt = now;
+    setNextLevel();
+    return;
+  }
+
   const cfg = VEGETABLES[state.nextLevel];
   const x = clamp(state.aimX, cfg.radius + 8, state.width - cfg.radius - 8);
   const body = createVegetable(state.nextLevel, x, 72);
@@ -177,7 +206,7 @@ function mergeVegetables(a, b) {
 
 function resetGame() {
   for (const body of Composite.allBodies(world)) {
-    if (body.label === 'vegetable') {
+    if (body.label === 'vegetable' || body.label === 'fertilizer') {
       Composite.remove(world, body);
     }
   }

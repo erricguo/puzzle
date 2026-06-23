@@ -1,6 +1,8 @@
 function setNextLevel() {
   state.nextLevel = randomSpawnLevel();
-  nextLabelEl.textContent = `下一顆: ${levelLabel(state.nextLevel)}`;
+  nextLabelEl.textContent = state.fertilizerCharges > 0
+    ? `肥料剩餘: ${state.fertilizerCharges}`
+    : `下一顆: ${levelLabel(state.nextLevel)}`;
 }
 
 function updateHud() {

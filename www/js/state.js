@@ -38,12 +38,14 @@ const state = {
   comboFreezeExpiresAt: 0,
   comboFreezeLastAt: 0,
   doubleDropExpiresAt: 0,
+  fertilizerCharges: 0,
   activeSkillLevel: 0,
   scoreSaved: false
 };
 
 const comboBursts = [];
 const blastEffects = [];
+const fertilizerEffects = [];
 const audioState = {
   context: null,
   master: null,

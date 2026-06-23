@@ -2,6 +2,16 @@ Events.on(engine, 'collisionStart', (event) => {
   for (const pair of event.pairs) {
     const a = pair.bodyA;
     const b = pair.bodyB;
+    if (a.label === 'fertilizer' || b.label === 'fertilizer') {
+      const fertilizer = a.label === 'fertilizer' ? a : b;
+      const other = fertilizer === a ? b : a;
+      if (other.label === 'vegetable') {
+        applyFertilizerToVegetable(other, fertilizer);
+      } else if (other.label === 'wall') {
+        consumeFertilizer(fertilizer);
+      }
+      continue;
+    }
     if (a.label === 'vegetable' && b.label === 'vegetable') {
       mergeVegetables(a, b);
     }

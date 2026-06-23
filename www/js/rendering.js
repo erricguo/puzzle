@@ -29,6 +29,27 @@ function drawVegetableSprite(ctx, level, x, y, radius, alpha = 1, angle = 0) {
   ctx.restore();
 }
 
+function drawFertilizerSprite(ctx, x, y, radius = 18, alpha = 1, angle = 0) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+
+  if (fertilizerImage.complete && fertilizerImage.naturalWidth > 0) {
+    const size = radius * 2.7;
+    ctx.drawImage(fertilizerImage, -size / 2, -size / 2, size, size);
+  } else {
+    ctx.fillStyle = '#ffd447';
+    ctx.strokeStyle = 'rgba(85, 57, 17, 0.32)';
+    ctx.lineWidth = 2;
+    roundedRect(ctx, -radius, -radius, radius * 2, radius * 2, 8);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 function drawComboBar(ctx, now) {
   if (state.combo <= 0 || state.comboDuration <= 0) return;
 
@@ -166,6 +187,53 @@ function drawBlastEffects(ctx, now) {
   }
 }
 
+function drawFertilizerEffects(ctx, now) {
+  for (let i = fertilizerEffects.length - 1; i >= 0; i--) {
+    const effect = fertilizerEffects[i];
+    const age = now - effect.startedAt;
+    const t = age / FERTILIZER_ANIMATION_DURATION;
+    if (t >= 1) {
+      fertilizerEffects.splice(i, 1);
+      continue;
+    }
+
+    const alpha = 1 - t;
+    const ease = 1 - Math.pow(1 - t, 3);
+    const lift = 34 * ease;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = '#68d84d';
+    ctx.lineWidth = 5 * alpha + 1;
+    ctx.shadowColor = '#68d84d';
+    ctx.shadowBlur = 18 * alpha;
+    ctx.beginPath();
+    ctx.arc(effect.x, effect.y, 24 + 42 * ease, 0, Math.PI * 2);
+    ctx.stroke();
+
+    if (fertilizerImage.complete && fertilizerImage.naturalWidth > 0) {
+      const size = 38 + 10 * (1 - ease);
+      ctx.drawImage(fertilizerImage, effect.x - size / 2, effect.y - lift - size / 2, size, size);
+    }
+
+    ctx.fillStyle = '#ffd447';
+    for (let spark = 0; spark < 8; spark++) {
+      const angle = (Math.PI * 2 * spark) / 8 + now * 0.004;
+      const distance = 14 + 34 * ease;
+      ctx.beginPath();
+      ctx.arc(
+        effect.x + Math.cos(angle) * distance,
+        effect.y - lift * 0.4 + Math.sin(angle) * distance,
+        2.4 * alpha + 1,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
 function drawGameOverlay() {
   const ctx = render.context;
   const now = performance.now();
@@ -254,7 +322,8 @@ function drawGameOverlay() {
   }
 
   const preview = VEGETABLES[state.nextLevel];
-  const x = clamp(state.aimX || state.width / 2, preview.radius + 8, state.width - preview.radius - 8);
+  const previewRadius = state.fertilizerCharges > 0 ? 18 : preview.radius;
+  const x = clamp(state.aimX || state.width / 2, previewRadius + 8, state.width - previewRadius - 8);
   const y = 70;
   const previewPulse = state.aiming ? 1 : 0.65 + Math.sin(now * 0.004) * 0.08;
   ctx.save();
@@ -263,11 +332,15 @@ function drawGameOverlay() {
   ctx.strokeStyle = 'rgba(75, 143, 61, 0.22)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(x, y, preview.radius + 11, 0, Math.PI * 2);
+  ctx.arc(x, y, previewRadius + 11, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
   ctx.restore();
-  drawVegetableSprite(ctx, state.nextLevel, x, y, preview.radius, state.aiming ? 0.92 : 0.72);
+  if (state.fertilizerCharges > 0) {
+    drawFertilizerSprite(ctx, x, y, previewRadius, state.aiming ? 0.96 : 0.78, Math.sin(now * 0.004) * 0.08);
+  } else {
+    drawVegetableSprite(ctx, state.nextLevel, x, y, preview.radius, state.aiming ? 0.92 : 0.72);
+  }
 
   if (state.aiming) {
     ctx.strokeStyle = 'rgba(45, 70, 35, 0.5)';
@@ -276,13 +349,17 @@ function drawGameOverlay() {
     ctx.shadowBlur = 8;
     ctx.setLineDash([6, 8]);
     ctx.beginPath();
-    ctx.moveTo(x, y + preview.radius + 12);
+    ctx.moveTo(x, y + previewRadius + 12);
     ctx.lineTo(x, state.height - 12);
     ctx.stroke();
     ctx.shadowBlur = 0;
   }
 
   for (const body of Composite.allBodies(world)) {
+    if (body.label === 'fertilizer') {
+      drawFertilizerSprite(ctx, body.position.x, body.position.y, 18, body.isConsumed ? 0.4 : 1, body.angle);
+      continue;
+    }
     if (body.label !== 'vegetable') continue;
     const veg = VEGETABLES[body.vegLevel];
     if (body.isBlasting) {
@@ -302,6 +379,7 @@ function drawGameOverlay() {
 
   ctx.restore();
   drawBlastEffects(ctx, now);
+  drawFertilizerEffects(ctx, now);
   drawComboImpact(ctx, now);
   drawComboBar(ctx, now);
 }
