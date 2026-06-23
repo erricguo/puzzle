@@ -27,6 +27,18 @@
 
     <section class="game-frame" aria-label="遊戲區">
       <div id="canvas-container"></div>
+      <div id="uiOverlay" class="ui-overlay" aria-hidden="true">
+        <div id="dangerLineEl" class="danger-line"></div>
+        <div id="dangerLabelEl" class="danger-pill danger-label">危險線</div>
+        <div id="dangerCountdownEl" class="danger-pill danger-countdown" hidden></div>
+        <div id="comboBarEl" class="combo-ui" hidden>
+          <div id="comboTextEl" class="combo-text"></div>
+          <div class="combo-track">
+            <span id="comboFillEl"></span>
+          </div>
+        </div>
+        <div id="corruptionStatusEl" class="corruption-status" hidden>環境狀態：腐化</div>
+      </div>
       <div id="gameOverPanel" class="game-over" hidden>
         <strong>遊戲結束</strong>
         <span id="finalScore">分數 0</span>
@@ -63,6 +75,14 @@
           <div id="skillCards" class="skill-cards" aria-label="技能選項"></div>
           <button id="refreshSkillButton" class="refresh-skill-button" type="button">刷新卡片 1 次</button>
         </div>
+      </div>
+      <div id="debugPanel" class="debug-panel" hidden>
+        <header>
+          <strong>DEBUG</strong>
+          <button id="closeDebugButton" type="button" aria-label="關閉 DEBUG 面板">×</button>
+        </header>
+        <button id="debugLevelButton" type="button">+10 等級</button>
+        <button id="debugCorruptionButton" type="button">跳腐化</button>
       </div>
     </section>
 

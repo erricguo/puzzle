@@ -57,6 +57,8 @@ function resizeGame() {
   }
   render.bounds.max.x = state.width;
   render.bounds.max.y = state.height;
+  uiOverlay.style.width = `${state.width}px`;
+  uiOverlay.style.height = `${state.height}px`;
 
   if (walls.floor) {
     Composite.remove(world, [walls.floor, walls.left, walls.right]);
@@ -86,6 +88,9 @@ function createVegetable(level, x, y) {
   const body = Bodies.circle(x, y, veg.radius, vegetableOptions(level));
   body.vegLevel = level;
   body.spawnedAt = performance.now();
+  body.corruptionProgress = 0;
+  body.corruptionElapsed = 0;
+  body.isCorrupted = false;
   body.canTriggerDangerAt = body.spawnedAt + 1400;
   body.dangerEnteredAt = null;
   body.isMerging = false;
@@ -184,7 +189,16 @@ function endAim(event) {
 }
 
 function mergeVegetables(a, b) {
-  if (a.isMerging || b.isMerging || a.isBlasting || b.isBlasting || a.vegLevel !== b.vegLevel || a.vegLevel >= VEGETABLES.length - 1) {
+  if (
+    a.isMerging ||
+    b.isMerging ||
+    a.isBlasting ||
+    b.isBlasting ||
+    a.isCorrupted ||
+    b.isCorrupted ||
+    a.vegLevel !== b.vegLevel ||
+    a.vegLevel >= VEGETABLES.length - 1
+  ) {
     return;
   }
 
@@ -233,6 +247,9 @@ function resetGame() {
   state.comboDuration = 0;
   state.comboExpiresAt = 0;
   state.comboPulseStartedAt = 0;
+  state.corruptionActive = false;
+  state.corruptionLastAt = 0;
+  state.debugCorruptionUnlocked = false;
   state.scoreSaved = false;
   comboBursts.length = 0;
   gameOverPanel.hidden = true;
@@ -275,6 +292,7 @@ function checkDangerLine() {
   if (!state.hasStarted || state.paused || state.gameOver) return;
   const now = performance.now();
   updateActiveSkills(now);
+  updateCorruption(now);
   clearExpiredCombo(now);
   const bodies = Composite.allBodies(world).filter((body) => body.label === 'vegetable' && !body.isMerging && !body.isBlasting);
   for (const body of bodies) {
@@ -288,6 +306,53 @@ function checkDangerLine() {
     if (body.dangerEnteredAt && now - body.dangerEnteredAt >= 2000) {
       finishGame();
       return;
+    }
+  }
+}
+
+function isCorruptionUnlocked() {
+  return state.debugCorruptionUnlocked || state.playerLevel >= CORRUPTION_UNLOCK_LEVEL;
+}
+
+function corruptionDurationForLevel(level) {
+  if (level >= VEGETABLES.length - 1) return Infinity;
+  return (level + 1) * CORRUPTION_SECONDS_PER_LEVEL * 1000;
+}
+
+function updateCorruption(now = performance.now()) {
+  if (!isCorruptionUnlocked()) {
+    state.corruptionLastAt = now;
+    return;
+  }
+
+  if (!state.corruptionActive) {
+    state.corruptionActive = true;
+  }
+
+  const delta = state.corruptionLastAt ? Math.min(now - state.corruptionLastAt, 250) : 0;
+  state.corruptionLastAt = now;
+  if (delta <= 0) return;
+
+  const bodies = Composite.allBodies(world)
+    .filter((body) => (
+      body.label === 'vegetable' &&
+      !body.isMerging &&
+      !body.isBlasting &&
+      body.vegLevel < VEGETABLES.length - 1 &&
+      now >= body.canTriggerDangerAt &&
+      body.position.y > state.dangerY
+    ));
+
+  for (const body of bodies) {
+    if (body.isCorrupted) continue;
+    const duration = corruptionDurationForLevel(body.vegLevel);
+    body.corruptionElapsed = (body.corruptionElapsed || 0) + delta;
+    const step = Math.floor((body.corruptionElapsed / duration) * 10);
+    body.corruptionProgress = clamp(step / 10, 0, 1);
+    if (body.corruptionProgress >= 1) {
+      body.corruptionProgress = 1;
+      body.isCorrupted = true;
+      body.isMerging = false;
     }
   }
 }

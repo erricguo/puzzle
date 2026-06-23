@@ -1,16 +1,54 @@
-function drawVegetableSprite(ctx, level, x, y, radius, alpha = 1, angle = 0) {
+function drawVegetableSprite(ctx, level, x, y, radius, alpha = 1, angle = 0, corruptionProgress = 0) {
   const veg = VEGETABLES[level];
   const image = vegetableImages[level];
+  const corruptionValue = Number(corruptionProgress);
+  const corruption = Number.isFinite(corruptionValue) ? clamp(corruptionValue, 0, 1) : 0;
+
+  const drawCorruption = (targetCtx, targetWidth, targetHeight) => {
+    if (corruption <= 0) return;
+    const startY = Math.floor(targetHeight * (1 - corruption));
+    const darkness = 0.24 + corruption * 0.58;
+    try {
+      const imageData = targetCtx.getImageData(0, startY, targetWidth, targetHeight - startY);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] === 0) continue;
+        data[i] = Math.round(data[i] * (1 - darkness));
+        data[i + 1] = Math.round(data[i + 1] * (1 - darkness));
+        data[i + 2] = Math.round(data[i + 2] * (1 - darkness));
+      }
+      targetCtx.putImageData(imageData, 0, startY);
+    } catch (error) {
+      console.warn('腐化遮罩繪製失敗', error);
+    }
+  };
+
   if (image && image.complete && image.naturalWidth > 0) {
     const maxSize = radius * 2.45;
     const scale = Math.min(maxSize / image.naturalWidth, maxSize / image.naturalHeight);
     const width = image.naturalWidth * scale;
     const height = image.naturalHeight * scale;
+    const bufferSize = Math.ceil(radius * 2.7);
+    const bufferRadius = bufferSize / 2;
+    const buffer = document.createElement('canvas');
+    buffer.width = bufferSize;
+    buffer.height = bufferSize;
+    const bufferCtx = buffer.getContext('2d');
+    const imageX = bufferRadius - width / 2;
+    const imageY = bufferRadius - height / 2;
+    const sprite = document.createElement('canvas');
+    sprite.width = Math.ceil(width);
+    sprite.height = Math.ceil(height);
+    const spriteCtx = sprite.getContext('2d');
+    spriteCtx.drawImage(image, 0, 0, sprite.width, sprite.height);
+    drawCorruption(spriteCtx, sprite.width, sprite.height);
+    bufferCtx.drawImage(sprite, imageX, imageY, width, height);
+
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(x, y);
     ctx.rotate(angle);
-    ctx.drawImage(image, -width / 2, -height / 2, width, height);
+    ctx.drawImage(buffer, -bufferRadius, -bufferRadius);
     ctx.restore();
     return;
   }
@@ -19,14 +57,62 @@ function drawVegetableSprite(ctx, level, x, y, radius, alpha = 1, angle = 0) {
   ctx.globalAlpha = alpha;
   ctx.translate(x, y);
   ctx.rotate(angle);
-  ctx.fillStyle = veg.color;
-  ctx.strokeStyle = 'rgba(35, 55, 28, 0.28)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(0, 0, radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
+  const bufferSize = Math.ceil(radius * 2.7);
+  const bufferRadius = bufferSize / 2;
+  const buffer = document.createElement('canvas');
+  buffer.width = bufferSize;
+  buffer.height = bufferSize;
+  const bufferCtx = buffer.getContext('2d');
+  bufferCtx.translate(bufferRadius, bufferRadius);
+  bufferCtx.fillStyle = veg.color;
+  bufferCtx.strokeStyle = 'rgba(35, 55, 28, 0.28)';
+  bufferCtx.lineWidth = 2;
+  bufferCtx.beginPath();
+  bufferCtx.arc(0, 0, radius, 0, Math.PI * 2);
+  bufferCtx.fill();
+  bufferCtx.stroke();
+  bufferCtx.setTransform(1, 0, 0, 1, 0, 0);
+  drawCorruption(bufferCtx, bufferSize, bufferSize);
+  ctx.drawImage(buffer, -bufferRadius, -bufferRadius);
   ctx.restore();
+}
+
+function drawPreviewVegetableSprite(ctx, level, x, y, radius, alpha = 1) {
+  const veg = VEGETABLES[level];
+  const image = vegetableImages[level];
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+
+  if (image && image.complete && image.naturalWidth > 0) {
+    const maxSize = radius * 2.45;
+    const scale = Math.min(maxSize / image.naturalWidth, maxSize / image.naturalHeight);
+    const width = image.naturalWidth * scale;
+    const height = image.naturalHeight * scale;
+    ctx.drawImage(image, -width / 2, -height / 2, width, height);
+  } else {
+    ctx.fillStyle = veg.color;
+    ctx.strokeStyle = 'rgba(35, 55, 28, 0.28)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function isPreviewBlockedByVegetable(x, y, radius) {
+  return Composite.allBodies(world).some((body) => {
+    if (body.label !== 'vegetable' || body.isBlasting) return false;
+    if (body.position.y > state.dangerY) return false;
+
+    const bodyRadius = VEGETABLES[body.vegLevel]?.radius || radius;
+    const distance = Math.hypot(body.position.x - x, body.position.y - y);
+    return distance < bodyRadius + radius + 8;
+  });
 }
 
 function drawFertilizerSprite(ctx, x, y, radius = 18, alpha = 1, angle = 0) {
@@ -50,45 +136,50 @@ function drawFertilizerSprite(ctx, x, y, radius = 18, alpha = 1, angle = 0) {
   ctx.restore();
 }
 
-function drawComboBar(ctx, now) {
-  if (state.combo <= 0 || state.comboDuration <= 0) return;
+function comboProgressFor(now) {
+  if (state.combo <= 0 || state.comboDuration <= 0) return 0;
 
   const frozen = isComboFrozen(now);
-  const progress = frozen
+  return frozen
     ? clamp((state.comboExpiresAt - state.comboFreezeLastAt) / state.comboDuration, 0, 1)
     : clamp((state.comboExpiresAt - now) / state.comboDuration, 0, 1);
-  if (progress <= 0) return;
+}
 
-  const width = Math.min(116, state.width * 0.32);
-  const height = 9;
-  const x = 12;
-  const y = 96;
-  const radius = 5;
-  const pulse = Math.max(0, 1 - (now - state.comboPulseStartedAt) / COMBO_IMPACT_DURATION);
-  const accent = comboColor(state.combo);
+function drawTopUiOverlay(now) {
+  dangerLineEl.style.top = `${state.dangerY}px`;
+  dangerLabelEl.style.top = `${state.dangerY - 27}px`;
+  dangerLabelEl.style.right = '10px';
 
-  ctx.save();
-  ctx.font = `${800 + Math.round(pulse) * 100} ${12 + pulse * 3}px system-ui, sans-serif`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'bottom';
-  ctx.fillStyle = pulse > 0 ? accent : 'rgba(40, 59, 31, 0.88)';
-  ctx.shadowColor = accent;
-  ctx.shadowBlur = 12 * pulse;
-  ctx.fillText(frozen ? `COMBO ${state.combo} 凍結` : `COMBO ${state.combo}`, x, y - 4);
+  const dangerTimes = Composite.allBodies(world)
+    .filter((body) => body.label === 'vegetable' && body.dangerEnteredAt)
+    .map((body) => body.dangerEnteredAt);
+  if (dangerTimes.length && !state.gameOver) {
+    const oldestDangerAt = Math.min(...dangerTimes);
+    const remaining = Math.max(0, 2 - (now - oldestDangerAt) / 1000);
+    dangerCountdownEl.hidden = false;
+    dangerCountdownEl.textContent = `${remaining.toFixed(1)} 秒`;
+    dangerCountdownEl.style.top = `${state.dangerY - 27}px`;
+  } else {
+    dangerCountdownEl.hidden = true;
+  }
 
-  ctx.beginPath();
-  roundedRect(ctx, x, y, width, height, radius);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(48, 78, 35, 0.2)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
+  const comboProgress = comboProgressFor(now);
+  if (comboProgress > 0) {
+    const frozen = isComboFrozen(now);
+    const pulse = Math.max(0, 1 - (now - state.comboPulseStartedAt) / COMBO_IMPACT_DURATION);
+    const accent = comboColor(state.combo);
+    comboBarEl.hidden = false;
+    comboBarEl.style.width = `${Math.min(116, state.width * 0.32)}px`;
+    comboBarEl.style.setProperty('--combo-color', comboProgress > 0.32 ? accent : '#ff634f');
+    comboBarEl.style.setProperty('--combo-glow', pulse > 0 ? accent : 'transparent');
+    comboTextEl.textContent = frozen ? `COMBO ${state.combo} 凍結` : `COMBO ${state.combo}`;
+    comboTextEl.style.fontSize = `${12 + pulse * 3}px`;
+    comboFillEl.style.width = `${comboProgress * 100}%`;
+  } else {
+    comboBarEl.hidden = true;
+  }
 
-  ctx.beginPath();
-  roundedRect(ctx, x, y, width * progress, height, radius);
-  ctx.fillStyle = progress > 0.32 ? accent : '#ff634f';
-  ctx.fill();
-  ctx.restore();
+  corruptionStatusEl.hidden = !state.corruptionActive;
 }
 
 function drawComboImpact(ctx, now) {
@@ -275,71 +366,28 @@ function drawGameOverlay() {
   ctx.fill();
   ctx.restore();
 
-  ctx.strokeStyle = 'rgba(203, 93, 67, 0.85)';
-  ctx.lineWidth = 3;
-  ctx.shadowColor = 'rgba(203, 93, 67, 0.28)';
-  ctx.shadowBlur = 8;
-  ctx.setLineDash([8, 8]);
-  ctx.beginPath();
-  ctx.moveTo(10, state.dangerY);
-  ctx.lineTo(state.width - 10, state.dangerY);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.shadowBlur = 0;
-
-  const dangerLabel = '危險線';
-  ctx.font = '800 12px system-ui, sans-serif';
-  const dangerWidth = ctx.measureText(dangerLabel).width + 20;
-  ctx.beginPath();
-  roundedRect(ctx, state.width - dangerWidth - 10, state.dangerY - 27, dangerWidth, 20, 8);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(203, 93, 67, 0.28)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.fillStyle = 'rgba(203, 93, 67, 0.92)';
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(dangerLabel, state.width - 20, state.dangerY - 17);
-
-  const dangerTimes = Composite.allBodies(world)
-    .filter((body) => body.label === 'vegetable' && body.dangerEnteredAt)
-    .map((body) => body.dangerEnteredAt);
-  if (dangerTimes.length && !state.gameOver) {
-    const oldestDangerAt = Math.min(...dangerTimes);
-    const remaining = Math.max(0, 2 - (now - oldestDangerAt) / 1000);
-    const countdown = `${remaining.toFixed(1)} 秒`;
-    const countdownWidth = ctx.measureText(countdown).width + 20;
-    ctx.beginPath();
-    roundedRect(ctx, 10, state.dangerY - 27, countdownWidth, 20, 8);
-    ctx.fillStyle = 'rgba(255, 248, 202, 0.88)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(203, 93, 67, 0.28)';
-    ctx.stroke();
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#b84b20';
-    ctx.fillText(countdown, 20, state.dangerY - 17);
-  }
-
   const preview = VEGETABLES[state.nextLevel];
   const previewRadius = state.fertilizerCharges > 0 ? 18 : preview.radius;
   const x = clamp(state.aimX || state.width / 2, previewRadius + 8, state.width - previewRadius - 8);
   const y = 70;
   const previewPulse = state.aiming ? 1 : 0.65 + Math.sin(now * 0.004) * 0.08;
-  ctx.save();
-  ctx.globalAlpha = previewPulse;
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.66)';
-  ctx.strokeStyle = 'rgba(75, 143, 61, 0.22)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(x, y, previewRadius + 11, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
-  if (state.fertilizerCharges > 0) {
-    drawFertilizerSprite(ctx, x, y, previewRadius, state.aiming ? 0.96 : 0.78, Math.sin(now * 0.004) * 0.08);
-  } else {
-    drawVegetableSprite(ctx, state.nextLevel, x, y, preview.radius, state.aiming ? 0.92 : 0.72);
+  const previewBlocked = isPreviewBlockedByVegetable(x, y, previewRadius);
+  if (!previewBlocked) {
+    ctx.save();
+    ctx.globalAlpha = previewPulse;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.66)';
+    ctx.strokeStyle = 'rgba(75, 143, 61, 0.22)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, previewRadius + 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+    if (state.fertilizerCharges > 0) {
+      drawFertilizerSprite(ctx, x, y, previewRadius, state.aiming ? 0.96 : 0.78, Math.sin(now * 0.004) * 0.08);
+    } else {
+      drawPreviewVegetableSprite(ctx, state.nextLevel, x, y, preview.radius, state.aiming ? 0.92 : 0.72);
+    }
   }
 
   if (state.aiming) {
@@ -353,6 +401,7 @@ function drawGameOverlay() {
     ctx.lineTo(x, state.height - 12);
     ctx.stroke();
     ctx.shadowBlur = 0;
+    ctx.setLineDash([]);
   }
 
   for (const body of Composite.allBodies(world)) {
@@ -370,16 +419,16 @@ function drawGameOverlay() {
       ctx.save();
       ctx.shadowColor = '#ffbf45';
       ctx.shadowBlur = 24 * alpha;
-      drawVegetableSprite(ctx, body.vegLevel, body.position.x, body.position.y, veg.radius * scale, alpha, body.angle);
+      drawVegetableSprite(ctx, body.vegLevel, body.position.x, body.position.y, veg.radius * scale, alpha, body.angle, body.corruptionProgress);
       ctx.restore();
       continue;
     }
-    drawVegetableSprite(ctx, body.vegLevel, body.position.x, body.position.y, veg.radius, 1, body.angle);
+    drawVegetableSprite(ctx, body.vegLevel, body.position.x, body.position.y, veg.radius, 1, body.angle, body.corruptionProgress);
   }
 
   ctx.restore();
   drawBlastEffects(ctx, now);
   drawFertilizerEffects(ctx, now);
   drawComboImpact(ctx, now);
-  drawComboBar(ctx, now);
+  drawTopUiOverlay(now);
 }

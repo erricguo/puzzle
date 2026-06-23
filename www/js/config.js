@@ -35,3 +35,6 @@ const COMBO_IMPACT_DURATION = 520;
 const COMBO_SHAKE_DURATION = 280;
 const COMBO_COLORS = ['#68d84d', '#ffd447', '#ff8c32', '#ff5bbd', '#8d70ff', '#35d7ff'];
 const BACKGROUND_MUSIC_SRC = 'assets/sound/Juice%20Merge%20Parade.mp3';
+
+const CORRUPTION_UNLOCK_LEVEL = 50;
+const CORRUPTION_SECONDS_PER_LEVEL = 10;

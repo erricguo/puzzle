@@ -25,13 +25,25 @@ render.canvas.addEventListener('pointerdown', startAim);
 render.canvas.addEventListener('pointermove', moveAim);
 render.canvas.addEventListener('pointerup', endAim);
 render.canvas.addEventListener('pointercancel', endAim);
-render.canvas.addEventListener('contextmenu', showDebugSkillChoices);
+render.canvas.addEventListener('contextmenu', showDebugPanel);
 skillPanel.addEventListener('pointerdown', stopSkillPanelBackdropEvent);
 skillPanel.addEventListener('pointerup', stopSkillPanelBackdropEvent);
 skillPanel.addEventListener('click', stopSkillPanelBackdropEvent);
 refreshSkillButton.addEventListener('click', (event) => {
   event.stopPropagation();
   refreshSkillCards();
+});
+debugPanel.addEventListener('pointerdown', (event) => event.stopPropagation());
+debugPanel.addEventListener('pointerup', (event) => event.stopPropagation());
+debugPanel.addEventListener('click', (event) => event.stopPropagation());
+closeDebugButton.addEventListener('click', closeDebugPanel);
+debugLevelButton.addEventListener('click', () => {
+  debugAddLevels(10);
+  playClickSound();
+});
+debugCorruptionButton.addEventListener('click', () => {
+  debugUnlockCorruption();
+  playClickSound();
 });
 startButton.addEventListener('click', startGame);
 startScene.addEventListener('click', startGame);

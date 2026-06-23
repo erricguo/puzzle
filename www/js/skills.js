@@ -118,12 +118,44 @@ function maybeShowSkillPanel() {
   skillPanel.hidden = false;
 }
 
-function showDebugSkillChoices(event) {
+function showDebugPanel(event) {
   event?.preventDefault();
-  if (!state.hasStarted || state.paused || state.gameOver || state.isChoosingSkill) return;
+  if (!state.hasStarted || state.gameOver) return;
 
-  state.pendingSkillChoices += 1;
+  debugPanel.hidden = !debugPanel.hidden;
+}
+
+function closeDebugPanel() {
+  debugPanel.hidden = true;
+}
+
+function debugAddLevels(levels = 10) {
+  if (!state.hasStarted || state.gameOver) return;
+
+  const fromLevel = state.playerLevel;
+  const toLevel = fromLevel + levels;
+  for (let level = fromLevel + 1; level <= toLevel; level++) {
+    if (level % 5 === 0) {
+      state.pendingSkillChoices += 1;
+    }
+  }
+
+  state.playerLevel = toLevel;
+  state.exp = 0;
+  state.expToNext = expRequiredForLevel(state.playerLevel);
+  updateHud();
+  closeDebugPanel();
   maybeShowSkillPanel();
+}
+
+function debugUnlockCorruption() {
+  if (!state.hasStarted || state.gameOver) return;
+
+  state.debugCorruptionUnlocked = true;
+  state.corruptionActive = true;
+  state.corruptionLastAt = performance.now();
+  closeDebugPanel();
+  updateHud();
 }
 
 function pickSkillOptions(skills) {
@@ -397,7 +429,7 @@ function activateFertilizerMode() {
 }
 
 function applyFertilizerToVegetable(target, fertilizer) {
-  if (!target || target.isMerging || target.isBlasting || target.vegLevel >= VEGETABLES.length - 1) return false;
+  if (!target || target.isMerging || target.isBlasting || target.isCorrupted || target.vegLevel >= VEGETABLES.length - 1) return false;
 
   const nextLevel = target.vegLevel + 1;
   const position = { x: target.position.x, y: target.position.y };
@@ -412,6 +444,14 @@ function applyFertilizerToVegetable(target, fertilizer) {
   }
 
   const upgraded = createVegetable(nextLevel, position.x, position.y);
+  const corruptionDuration = corruptionDurationForLevel(nextLevel);
+  upgraded.corruptionElapsed = Number.isFinite(corruptionDuration)
+    ? Math.min(target.corruptionElapsed || 0, corruptionDuration)
+    : 0;
+  upgraded.corruptionProgress = Number.isFinite(corruptionDuration)
+    ? clamp(Math.floor((upgraded.corruptionElapsed / corruptionDuration) * 10) / 10, 0, 1)
+    : 0;
+  upgraded.isCorrupted = false;
   Body.setVelocity(upgraded, velocity);
   Body.setAngle(upgraded, angle);
   Body.setAngularVelocity(upgraded, angularVelocity + 0.18);
@@ -480,6 +520,9 @@ function resetSkillState() {
   state.playerLevel = 1;
   state.exp = 0;
   state.expToNext = expRequiredForLevel(1);
+  state.corruptionActive = false;
+  state.corruptionLastAt = 0;
+  state.debugCorruptionUnlocked = false;
   state.pendingSkillChoices = 0;
   state.isChoosingSkill = false;
   state.skillRefreshesRemaining = 0;
