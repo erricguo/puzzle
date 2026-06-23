@@ -113,6 +113,7 @@ function createFertilizer(x, y) {
 function dropVegetable() {
   if (!state.hasStarted || state.paused || state.gameOver) return;
   const now = performance.now();
+  if (now < state.suppressDropUntil) return;
   if (now - state.lastDropAt < dropCooldownFor(now)) return;
 
   if (state.fertilizerCharges > 0) {
@@ -153,6 +154,7 @@ function pointerX(event) {
 }
 
 function startAim(event) {
+  if (event.button !== 0) return;
   if (!state.hasStarted || state.paused || state.gameOver) return;
   state.aiming = true;
   state.pointerId = event.pointerId;
@@ -166,6 +168,13 @@ function moveAim(event) {
 }
 
 function endAim(event) {
+  if (event.button !== 0) return;
+  if (performance.now() < state.suppressDropUntil) {
+    state.aiming = false;
+    state.pointerId = null;
+    render.canvas.releasePointerCapture?.(event.pointerId);
+    return;
+  }
   if (!state.aiming || state.pointerId !== event.pointerId) return;
   state.aimX = pointerX(event);
   state.aiming = false;
@@ -217,6 +226,7 @@ function resetGame() {
   state.aiming = false;
   state.paused = false;
   engine.timing.timeScale = 1;
+  state.suppressDropUntil = 0;
   resetSkillState();
   state.combo = 0;
   state.bestCombo = 0;

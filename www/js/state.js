@@ -19,6 +19,7 @@ const state = {
   paused: false,
   gameOver: false,
   lastDropAt: 0,
+  suppressDropUntil: 0,
   dangerY: 132,
   combo: 0,
   bestCombo: 0,

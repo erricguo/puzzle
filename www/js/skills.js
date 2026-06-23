@@ -104,8 +104,9 @@ function maybeShowSkillPanel() {
   state.pendingSkillChoices -= 1;
   state.isChoosingSkill = true;
   state.paused = true;
-  state.aiming = false;
+  cancelAiming();
   engine.timing.timeScale = 0;
+  state.suppressDropUntil = performance.now() + 1000;
   pausePanel.hidden = true;
   pauseButton.textContent = '繼續';
   stopMusic();
@@ -160,7 +161,12 @@ function renderSkillCards(skills) {
       <strong>${escapeHtml(skill.name)}</strong>
       <span>${escapeHtml(skill.description)}</span>
     `;
-    button.addEventListener('click', () => chooseSkill(skill.id));
+    button.addEventListener('pointerdown', (event) => event.stopPropagation());
+    button.addEventListener('pointerup', (event) => event.stopPropagation());
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      chooseSkill(skill.id);
+    });
     skillCardsEl.appendChild(button);
   });
 }
@@ -172,6 +178,8 @@ function chooseSkill(skillId) {
   const applied = skill.apply();
   if (applied === false) return;
   state.selectedSkills.push(skillId);
+  cancelAiming();
+  state.suppressDropUntil = performance.now() + 320;
   playClickSound();
   closeSkillPanel();
 }
@@ -180,12 +188,28 @@ function closeSkillPanel() {
   skillPanel.hidden = true;
   state.isChoosingSkill = false;
   state.paused = false;
+  cancelAiming();
+  state.suppressDropUntil = performance.now() + 700;
   engine.timing.timeScale = 1;
   pauseButton.textContent = '暫停';
   updateHud();
   updateGravity();
   startMusic();
   maybeShowSkillPanel();
+}
+
+function cancelAiming() {
+  if (state.pointerId !== null) {
+    render.canvas.releasePointerCapture?.(state.pointerId);
+  }
+  state.aiming = false;
+  state.pointerId = null;
+}
+
+function stopSkillPanelBackdropEvent(event) {
+  if (!event.target.closest?.('.skill-card')) {
+    event.stopPropagation();
+  }
 }
 
 function activateTimedSkill(key) {

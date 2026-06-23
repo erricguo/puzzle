@@ -26,6 +26,9 @@ render.canvas.addEventListener('pointermove', moveAim);
 render.canvas.addEventListener('pointerup', endAim);
 render.canvas.addEventListener('pointercancel', endAim);
 render.canvas.addEventListener('contextmenu', showDebugSkillChoices);
+skillPanel.addEventListener('pointerdown', stopSkillPanelBackdropEvent);
+skillPanel.addEventListener('pointerup', stopSkillPanelBackdropEvent);
+skillPanel.addEventListener('click', stopSkillPanelBackdropEvent);
 startButton.addEventListener('click', startGame);
 startScene.addEventListener('click', startGame);
 startLeaderboardButton.addEventListener('click', (event) => {
