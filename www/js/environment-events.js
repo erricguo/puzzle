@@ -109,6 +109,12 @@ function environmentComboBonus(now = performance.now()) {
   return isEnvironmentEventActive('harvest', now) ? HARVEST_COMBO_BONUS : 0;
 }
 
+function harvestCorruptionRecovery(now = performance.now()) {
+  return isEnvironmentEventActive('harvest', now)
+    ? HARVEST_CORRUPTION_RECOVERY_MULTIPLIER
+    : 0;
+}
+
 function windVelocityOffset(now = performance.now()) {
   if (!isEnvironmentEventActive('strong_wind', now)) return 0;
   return Math.sin(now * 0.0034) * STRONG_WIND_FORCE + (Math.random() - 0.5) * 1.1;

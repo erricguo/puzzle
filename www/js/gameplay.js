@@ -494,7 +494,9 @@ function updateCorruption(now = performance.now()) {
     if (body.isCorrupted) continue;
     if (isProtectedByPumpkinAura(body, pumpkins)) continue;
     const duration = corruptionDurationForLevel(body.vegLevel);
-    body.corruptionElapsed = (body.corruptionElapsed || 0) + delta * pestCorruptionMultiplier(body, now);
+    const corruptionGain = delta * pestCorruptionMultiplier(body, now);
+    const harvestRecovery = delta * harvestCorruptionRecovery(now);
+    body.corruptionElapsed = Math.max(0, (body.corruptionElapsed || 0) + corruptionGain - harvestRecovery);
     const step = Math.floor((body.corruptionElapsed / duration) * 10);
     body.corruptionProgress = clamp(step / 10, 0, 1);
     if (body.corruptionProgress >= 1) {
