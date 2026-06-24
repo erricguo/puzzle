@@ -62,3 +62,36 @@ create policy "Players can save their encyclopedia unlocks"
   for insert
   to authenticated
   with check (auth.uid() = user_id);
+
+create table if not exists public.vegetable_player_progress (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  coins integer not null default 0 check (coins >= 0),
+  owned_talents text[] not null default '{}',
+  updated_at timestamptz not null default now()
+);
+
+alter table public.vegetable_player_progress enable row level security;
+
+grant select, insert, update on public.vegetable_player_progress to authenticated;
+
+drop policy if exists "Players can read their progress" on public.vegetable_player_progress;
+create policy "Players can read their progress"
+  on public.vegetable_player_progress
+  for select
+  to authenticated
+  using (auth.uid() = user_id);
+
+drop policy if exists "Players can insert their progress" on public.vegetable_player_progress;
+create policy "Players can insert their progress"
+  on public.vegetable_player_progress
+  for insert
+  to authenticated
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Players can update their progress" on public.vegetable_player_progress;
+create policy "Players can update their progress"
+  on public.vegetable_player_progress
+  for update
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

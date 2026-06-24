@@ -348,6 +348,45 @@ function drawFertilizerEffects(ctx, now) {
   }
 }
 
+function drawPumpkinAuras(ctx, bodies, now) {
+  if (!state.corruptionActive) return;
+
+  bodies
+    .filter((body) => body.label === 'vegetable' && body.vegLevel === PUMPKIN_LEVEL && !body.isBlasting)
+    .forEach((pumpkin) => {
+      const pulse = 0.5 + Math.sin(now * 0.003) * 0.12;
+      const radius = PUMPKIN_AURA_RADIUS + pulse * 8;
+      const gradient = ctx.createRadialGradient(
+        pumpkin.position.x,
+        pumpkin.position.y,
+        VEGETABLES[PUMPKIN_LEVEL].radius * 0.8,
+        pumpkin.position.x,
+        pumpkin.position.y,
+        radius
+      );
+      gradient.addColorStop(0, 'rgba(255, 216, 77, 0.18)');
+      gradient.addColorStop(0.58, 'rgba(124, 255, 93, 0.1)');
+      gradient.addColorStop(1, 'rgba(124, 255, 93, 0)');
+
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(pumpkin.position.x, pumpkin.position.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.32 + pulse * 0.18;
+      ctx.strokeStyle = 'rgba(255, 216, 77, 0.65)';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 10]);
+      ctx.lineDashOffset = -now * 0.02;
+      ctx.beginPath();
+      ctx.arc(pumpkin.position.x, pumpkin.position.y, PUMPKIN_AURA_RADIUS, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    });
+}
+
 function updateFpsMeter(now) {
   if (!state.fpsLastAt) {
     state.fpsLastAt = now;
@@ -449,7 +488,10 @@ function drawGameOverlay() {
     ctx.setLineDash([]);
   }
 
-  for (const body of Composite.allBodies(world)) {
+  const bodies = Composite.allBodies(world);
+  drawPumpkinAuras(ctx, bodies, now);
+
+  for (const body of bodies) {
     if (body.label === 'fertilizer') {
       drawFertilizerSprite(ctx, body.position.x, body.position.y, 18, body.isConsumed ? 0.4 : 1, body.angle);
       continue;

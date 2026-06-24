@@ -38,3 +38,5 @@ const BACKGROUND_MUSIC_SRC = 'assets/sound/Juice%20Merge%20Parade.mp3';
 
 const CORRUPTION_UNLOCK_LEVEL = 50;
 const CORRUPTION_SECONDS_PER_LEVEL = 10;
+const PUMPKIN_LEVEL = VEGETABLES.length - 1;
+const PUMPKIN_AURA_RADIUS = 150;

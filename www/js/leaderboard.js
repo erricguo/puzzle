@@ -66,6 +66,9 @@ function applySupabaseUser(user) {
     if (typeof syncEncyclopediaForCurrentUser === 'function') {
       syncEncyclopediaForCurrentUser();
     }
+    if (typeof syncPlayerProgressForCurrentUser === 'function') {
+      syncPlayerProgressForCurrentUser();
+    }
     return;
   }
 
@@ -78,6 +81,9 @@ function applySupabaseUser(user) {
   googleSignInButton.disabled = false;
   if (typeof syncEncyclopediaForCurrentUser === 'function') {
     syncEncyclopediaForCurrentUser();
+  }
+  if (typeof syncPlayerProgressForCurrentUser === 'function') {
+    syncPlayerProgressForCurrentUser();
   }
 }
 

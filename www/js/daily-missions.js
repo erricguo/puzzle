@@ -123,6 +123,7 @@ function normalizeDailyMissionState(stored = state.dailyMissionState) {
 
 function saveCoins() {
   localStorage.setItem('veggieMergeCoins', String(state.coins));
+  queuePlayerProgressSync?.();
 }
 
 function updateCoinUi() {

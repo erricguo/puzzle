@@ -416,6 +416,21 @@ function corruptionDurationForLevel(level) {
   return (level + 1) * CORRUPTION_SECONDS_PER_LEVEL * 1000;
 }
 
+function pumpkinAuraSources() {
+  return Composite.allBodies(world).filter((body) => (
+    body.label === 'vegetable' &&
+    body.vegLevel === PUMPKIN_LEVEL &&
+    !body.isMerging &&
+    !body.isBlasting
+  ));
+}
+
+function isProtectedByPumpkinAura(body, pumpkins = pumpkinAuraSources()) {
+  return pumpkins.some((pumpkin) => (
+    Math.hypot(body.position.x - pumpkin.position.x, body.position.y - pumpkin.position.y) <= PUMPKIN_AURA_RADIUS
+  ));
+}
+
 function updateCorruption(now = performance.now()) {
   if (!isCorruptionUnlocked()) {
     state.corruptionLastAt = now;
@@ -430,18 +445,20 @@ function updateCorruption(now = performance.now()) {
   state.corruptionLastAt = now;
   if (delta <= 0) return;
 
+  const pumpkins = pumpkinAuraSources();
   const bodies = Composite.allBodies(world)
     .filter((body) => (
       body.label === 'vegetable' &&
       !body.isMerging &&
       !body.isBlasting &&
-      body.vegLevel < VEGETABLES.length - 1 &&
+      body.vegLevel < PUMPKIN_LEVEL &&
       now >= body.canTriggerDangerAt &&
       body.position.y > state.dangerY
     ));
 
   for (const body of bodies) {
     if (body.isCorrupted) continue;
+    if (isProtectedByPumpkinAura(body, pumpkins)) continue;
     const duration = corruptionDurationForLevel(body.vegLevel);
     body.corruptionElapsed = (body.corruptionElapsed || 0) + delta;
     const step = Math.floor((body.corruptionElapsed / duration) * 10);

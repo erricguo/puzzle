@@ -40,6 +40,7 @@ const TALENT_DEFS = [
 
 function saveOwnedTalents() {
   localStorage.setItem(TALENT_STORAGE_KEY, JSON.stringify(state.ownedTalents));
+  queuePlayerProgressSync?.();
 }
 
 function hasTalent(id) {
