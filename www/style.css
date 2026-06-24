@@ -1087,12 +1087,12 @@ button {
 }
 
 .talent-button {
-  background: linear-gradient(180deg, #ffbf45 0%, #d98a23 100%);
-  box-shadow: 0 8px 0 #9d611a, 0 14px 24px rgba(99, 74, 20, 0.2);
+  background: linear-gradient(180deg, #ff6f9a 0%, #cf2d6f 100%);
+  box-shadow: 0 8px 0 #8f1749, 0 14px 24px rgba(143, 23, 73, 0.22);
 }
 
 .talent-button:active {
-  box-shadow: 0 4px 0 #9d611a, 0 9px 16px rgba(99, 74, 20, 0.16);
+  box-shadow: 0 4px 0 #8f1749, 0 9px 16px rgba(143, 23, 73, 0.18);
 }
 
 @keyframes floatVeg {
