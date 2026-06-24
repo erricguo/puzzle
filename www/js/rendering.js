@@ -202,7 +202,15 @@ function drawTopUiOverlay(now) {
     comboBarEl.hidden = true;
   }
 
-  corruptionStatusEl.hidden = !state.corruptionActive;
+  const eventLabels = activeEnvironmentEventLabels(now);
+  const statusLabels = [
+    ...(state.corruptionActive ? ['腐化'] : []),
+    ...eventLabels
+  ];
+  corruptionStatusEl.hidden = statusLabels.length === 0;
+  corruptionStatusEl.textContent = statusLabels.length
+    ? `環境狀態：${statusLabels.join(' / ')}`
+    : '';
 }
 
 function drawComboImpact(ctx, now) {
@@ -387,6 +395,154 @@ function drawPumpkinAuras(ctx, bodies, now) {
     });
 }
 
+function drawEnvironmentEventEffects(ctx, now) {
+  const classes = environmentEventClassList(now);
+  if (!classes.length) return;
+
+  ctx.save();
+  if (classes.includes('event-harvest')) {
+    const sweepX = ((now * 0.18) % (state.width + 180)) - 90;
+    const glow = ctx.createRadialGradient(
+      state.width * 0.5,
+      state.height * 0.42,
+      state.width * 0.12,
+      state.width * 0.5,
+      state.height * 0.42,
+      state.width * 0.68
+    );
+    glow.addColorStop(0, 'rgba(255, 246, 160, 0.3)');
+    glow.addColorStop(0.42, 'rgba(255, 216, 77, 0.18)');
+    glow.addColorStop(1, 'rgba(255, 216, 77, 0)');
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, state.width, state.height);
+
+    ctx.globalAlpha = 0.34;
+    ctx.fillStyle = 'rgba(255, 210, 48, 0.58)';
+    ctx.fillRect(0, 0, state.width, state.height);
+
+    ctx.globalAlpha = 0.36;
+    ctx.strokeStyle = 'rgba(255, 255, 210, 0.9)';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(sweepX - 72, 0);
+    ctx.lineTo(sweepX + 88, state.height);
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.78;
+    ctx.fillStyle = '#fff4a8';
+    for (let i = 0; i < 26; i++) {
+      const x = (i * 47 + now * 0.055) % (state.width + 34) - 17;
+      const y = (i * 83 + Math.sin(now * 0.002 + i) * 18) % state.height;
+      const size = 2.2 + (i % 4) * 0.8;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  if (classes.includes('event-pest')) {
+    const sickGlow = ctx.createLinearGradient(0, 0, 0, state.height);
+    sickGlow.addColorStop(0, 'rgba(18, 16, 14, 0.36)');
+    sickGlow.addColorStop(0.55, 'rgba(44, 29, 16, 0.34)');
+    sickGlow.addColorStop(1, 'rgba(9, 18, 10, 0.42)');
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = sickGlow;
+    ctx.fillRect(0, 0, state.width, state.height);
+
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = 'rgba(45, 18, 10, 0.84)';
+    for (let i = 0; i < 34; i++) {
+      const drift = Math.sin(now * 0.0018 + i * 1.7) * 9;
+      const x = (i * 61 + drift) % (state.width + 28) - 14;
+      const y = (i * 37 + now * 0.012) % state.height;
+      const radius = 3 + (i % 5) * 1.6;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = 0.2;
+    ctx.strokeStyle = 'rgba(20, 12, 7, 0.78)';
+    ctx.lineWidth = 2;
+    for (let y = state.dangerY + 20; y < state.height; y += 32) {
+      ctx.beginPath();
+      ctx.moveTo(0, y + Math.sin(now * 0.002 + y) * 8);
+      ctx.lineTo(state.width, y + Math.cos(now * 0.002 + y) * 8);
+      ctx.stroke();
+    }
+  }
+
+  if (classes.includes('event-rain')) {
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = 'rgba(25, 74, 106, 0.34)';
+    ctx.fillRect(0, 0, state.width, state.height);
+
+    ctx.globalAlpha = 0.72;
+    ctx.strokeStyle = 'rgba(167, 235, 255, 0.72)';
+    ctx.lineWidth = 2.2;
+    for (let x = -state.height; x < state.width + state.height * 0.35; x += 16) {
+      const offset = (now * 0.58) % 16;
+      ctx.beginPath();
+      ctx.moveTo(x + offset, 0);
+      ctx.lineTo(x + offset + state.height * 0.28, state.height);
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = 0.36;
+    ctx.strokeStyle = 'rgba(230, 250, 255, 0.7)';
+    ctx.lineWidth = 1;
+    for (let x = -state.height; x < state.width + state.height * 0.4; x += 34) {
+      const offset = (now * 0.86) % 34;
+      ctx.beginPath();
+      ctx.moveTo(x + offset, -20);
+      ctx.lineTo(x + offset + state.height * 0.34, state.height + 20);
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = 0.26;
+    ctx.fillStyle = 'rgba(198, 239, 255, 0.64)';
+    for (let i = 0; i < 16; i++) {
+      const x = (i * 53 + now * 0.09) % state.width;
+      const y = state.height - 18 - (i % 4) * 13;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 12 + (i % 3) * 7, 2.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  if (classes.includes('event-wind')) {
+    ctx.globalAlpha = 0.16;
+    ctx.fillStyle = 'rgba(210, 248, 255, 0.5)';
+    ctx.fillRect(0, 0, state.width, state.height);
+
+    ctx.globalAlpha = 0.72;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.88)';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    for (let y = state.dangerY + 14; y < state.height; y += 34) {
+      const offset = (now * 0.34 + y * 2.7) % (state.width + 190);
+      ctx.beginPath();
+      ctx.moveTo(offset - 190, y);
+      ctx.quadraticCurveTo(offset - 116, y - 20, offset - 28, y - 3);
+      ctx.quadraticCurveTo(offset + 26, y + 8, offset + 72, y - 8);
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = 0.42;
+    ctx.strokeStyle = 'rgba(116, 211, 230, 0.9)';
+    ctx.lineWidth = 1.6;
+    for (let y = state.dangerY + 28; y < state.height; y += 22) {
+      const offset = (now * 0.52 + y * 1.9) % (state.width + 130);
+      ctx.beginPath();
+      ctx.moveTo(offset - 130, y);
+      ctx.lineTo(offset - 38, y - 5);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
 function updateFpsMeter(now) {
   if (!state.fpsLastAt) {
     state.fpsLastAt = now;
@@ -489,6 +645,7 @@ function drawGameOverlay() {
   }
 
   const bodies = Composite.allBodies(world);
+  drawEnvironmentEventEffects(ctx, now);
   drawPumpkinAuras(ctx, bodies, now);
 
   for (const body of bodies) {

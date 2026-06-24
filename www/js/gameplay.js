@@ -84,9 +84,10 @@ function resizeGame() {
 
 function vegetableOptions(level) {
   const veg = VEGETABLES[level];
+  const baseFriction = 0.015;
   return {
     restitution: 0.36,
-    friction: 0.015,
+    friction: rainFrictionFor(baseFriction),
     frictionAir: 0.002,
     density: 0.0011 + level * 0.00008,
     label: 'vegetable',
@@ -140,7 +141,7 @@ function dropVegetable() {
   if (state.fertilizerCharges > 0) {
     const x = clamp(state.aimX, 26, state.width - 26);
     const fertilizer = createFertilizer(x, 72);
-    Body.setVelocity(fertilizer, { x: (Math.random() - 0.5) * 0.9, y: 0 });
+    Body.setVelocity(fertilizer, { x: (Math.random() - 0.5) * 0.9 + windVelocityOffset(now), y: 0 });
     Body.setAngle(fertilizer, (Math.random() - 0.5) * 0.5);
     Body.setAngularVelocity(fertilizer, (Math.random() - 0.5) * 0.18);
     state.fertilizerCharges = Math.max(0, state.fertilizerCharges - 1);
@@ -153,14 +154,15 @@ function dropVegetable() {
   const cfg = VEGETABLES[state.nextLevel];
   const x = clamp(state.aimX, cfg.radius + 8, state.width - cfg.radius - 8);
   const body = createVegetable(state.nextLevel, x, 72);
-  Body.setVelocity(body, { x: (Math.random() - 0.5) * 1.2, y: 0 });
+  const windOffset = windVelocityOffset(now);
+  Body.setVelocity(body, { x: (Math.random() - 0.5) * 1.2 + windOffset, y: 0 });
   Body.setAngle(body, (Math.random() - 0.5) * 0.7);
   Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.16);
   if (isDoubleDropActive(now)) {
     const offset = cfg.radius + 10;
     const secondX = clamp(x + (x < state.width / 2 ? offset : -offset), cfg.radius + 8, state.width - cfg.radius - 8);
     const second = createVegetable(state.nextLevel, secondX, 72);
-    Body.setVelocity(second, { x: (Math.random() - 0.5) * 1.2, y: 0 });
+    Body.setVelocity(second, { x: (Math.random() - 0.5) * 1.2 + windOffset * 0.8, y: 0 });
     Body.setAngle(second, (Math.random() - 0.5) * 0.7);
     Body.setAngularVelocity(second, (Math.random() - 0.5) * 0.16);
   }
@@ -272,6 +274,9 @@ function resetGame() {
   state.corruptionActive = false;
   state.corruptionLastAt = 0;
   state.debugCorruptionUnlocked = false;
+  state.activeEnvironmentEvents = [];
+  state.environmentEventsPausedAt = 0;
+  state.triggeredEnvironmentEvents = [];
   state.scoreSaved = false;
   leaderboardState.recentScoreRow = null;
   leaderboardState.recentScoreRank = null;
@@ -367,6 +372,9 @@ function returnToStartScene() {
   state.comboExpiresAt = 0;
   state.comboPulseStartedAt = 0;
   state.scoreSaved = false;
+  state.activeEnvironmentEvents = [];
+  state.environmentEventsPausedAt = 0;
+  state.triggeredEnvironmentEvents = [];
   leaderboardState.recentScoreRow = null;
   leaderboardState.recentScoreRank = null;
   comboBursts.length = 0;
@@ -388,6 +396,8 @@ function returnToStartScene() {
 function checkDangerLine() {
   if (!state.hasStarted || state.paused || state.gameOver) return;
   const now = performance.now();
+  updateEnvironmentEvents(now);
+  updateRainFriction(now);
   updateActiveSkills(now);
   updateCorruption(now);
   clearExpiredCombo(now);
@@ -414,6 +424,18 @@ function isCorruptionUnlocked() {
 function corruptionDurationForLevel(level) {
   if (level >= VEGETABLES.length - 1) return Infinity;
   return (level + 1) * CORRUPTION_SECONDS_PER_LEVEL * 1000;
+}
+
+function updateRainFriction(now = performance.now()) {
+  const rainActive = isEnvironmentEventActive('heavy_rain', now);
+  for (const body of Composite.allBodies(world)) {
+    if (body.label !== 'vegetable') continue;
+    const baseFriction = 0.015;
+    const targetFriction = rainActive ? baseFriction * HEAVY_RAIN_FRICTION_MULTIPLIER : baseFriction;
+    if (Math.abs(body.friction - targetFriction) > 0.0001) {
+      body.friction = targetFriction;
+    }
+  }
 }
 
 function pumpkinAuraSources() {
@@ -460,7 +482,7 @@ function updateCorruption(now = performance.now()) {
     if (body.isCorrupted) continue;
     if (isProtectedByPumpkinAura(body, pumpkins)) continue;
     const duration = corruptionDurationForLevel(body.vegLevel);
-    body.corruptionElapsed = (body.corruptionElapsed || 0) + delta;
+    body.corruptionElapsed = (body.corruptionElapsed || 0) + delta * pestCorruptionMultiplier(body, now);
     const step = Math.floor((body.corruptionElapsed / duration) * 10);
     body.corruptionProgress = clamp(step / 10, 0, 1);
     if (body.corruptionProgress >= 1) {

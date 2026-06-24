@@ -16,7 +16,8 @@ function updateHud() {
 
 function comboDurationFor(combo) {
   if (combo <= 0) return 0;
-  return Math.min(COMBO_MAX_DURATION + talentComboDurationBonus(), COMBO_BASE_DURATION * Math.pow(COMBO_GROWTH, combo - 1) + talentComboDurationBonus());
+  const bonus = talentComboDurationBonus() + environmentComboBonus();
+  return Math.min(COMBO_MAX_DURATION + bonus, COMBO_BASE_DURATION * Math.pow(COMBO_GROWTH, combo - 1) + bonus);
 }
 
 function comboColor(combo) {

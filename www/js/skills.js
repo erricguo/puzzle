@@ -80,6 +80,7 @@ function expRequiredForLevel(level) {
 function gainExperience(amount, combo = 0) {
   if (!amount || state.gameOver) return;
 
+  const startLevel = state.playerLevel;
   state.exp += experienceWithComboBonus(amount, combo);
   while (state.exp >= state.expToNext) {
     state.exp -= state.expToNext;
@@ -90,6 +91,7 @@ function gainExperience(amount, combo = 0) {
     }
   }
 
+  checkLevelEnvironmentEvents(startLevel, state.playerLevel);
   updateHud();
   maybeShowSkillPanel();
 }
@@ -107,6 +109,7 @@ function maybeShowSkillPanel() {
   state.isChoosingSkill = true;
   state.skillChoicesUnlockAt = performance.now() + SKILL_CHOICE_UNLOCK_DELAY;
   state.paused = true;
+  pauseEnvironmentEvents();
   cancelAiming();
   engine.timing.timeScale = 0;
   state.suppressDropUntil = performance.now() + 1000;
@@ -143,6 +146,7 @@ function debugAddLevels(levels = 10) {
   }
 
   state.playerLevel = toLevel;
+  checkLevelEnvironmentEvents(fromLevel, toLevel);
   state.exp = 0;
   state.expRemainder = 0;
   state.expToNext = expRequiredForLevel(state.playerLevel);
@@ -336,6 +340,7 @@ function chooseSkill(skillId) {
 
 function closeSkillPanel() {
   skillPanel.hidden = true;
+  resumeEnvironmentEvents();
   state.isChoosingSkill = false;
   state.paused = false;
   cancelAiming();
