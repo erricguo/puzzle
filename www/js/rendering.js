@@ -443,27 +443,27 @@ function drawEnvironmentEventEffects(ctx, now) {
 
   if (classes.includes('event-pest')) {
     const sickGlow = ctx.createLinearGradient(0, 0, 0, state.height);
-    sickGlow.addColorStop(0, 'rgba(18, 16, 14, 0.36)');
-    sickGlow.addColorStop(0.55, 'rgba(44, 29, 16, 0.34)');
-    sickGlow.addColorStop(1, 'rgba(9, 18, 10, 0.42)');
+    sickGlow.addColorStop(0, 'rgba(13, 27, 9, 0.42)');
+    sickGlow.addColorStop(0.55, 'rgba(56, 45, 12, 0.4)');
+    sickGlow.addColorStop(1, 'rgba(8, 24, 8, 0.48)');
     ctx.globalAlpha = 1;
     ctx.fillStyle = sickGlow;
     ctx.fillRect(0, 0, state.width, state.height);
 
-    ctx.globalAlpha = 0.22;
-    ctx.fillStyle = 'rgba(45, 18, 10, 0.84)';
-    for (let i = 0; i < 34; i++) {
+    ctx.globalAlpha = 0.34;
+    ctx.fillStyle = 'rgba(74, 95, 18, 0.86)';
+    for (let i = 0; i < 58; i++) {
       const drift = Math.sin(now * 0.0018 + i * 1.7) * 9;
-      const x = (i * 61 + drift) % (state.width + 28) - 14;
-      const y = (i * 37 + now * 0.012) % state.height;
+      const x = (i * 43 + drift) % (state.width + 28) - 14;
+      const y = (i * 31 + now * 0.018) % state.height;
       const radius = 3 + (i % 5) * 1.6;
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    ctx.globalAlpha = 0.2;
-    ctx.strokeStyle = 'rgba(20, 12, 7, 0.78)';
+    ctx.globalAlpha = 0.28;
+    ctx.strokeStyle = 'rgba(21, 45, 9, 0.82)';
     ctx.lineWidth = 2;
     for (let y = state.dangerY + 20; y < state.height; y += 32) {
       ctx.beginPath();
@@ -474,34 +474,52 @@ function drawEnvironmentEventEffects(ctx, now) {
   }
 
   if (classes.includes('event-rain')) {
-    ctx.globalAlpha = 0.2;
-    ctx.fillStyle = 'rgba(25, 74, 106, 0.34)';
+    const rainSeed = (index, salt) => {
+      const value = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453;
+      return value - Math.floor(value);
+    };
+    const rainTravelHeight = state.height + 180;
+
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = 'rgba(7, 32, 74, 0.52)';
     ctx.fillRect(0, 0, state.width, state.height);
 
-    ctx.globalAlpha = 0.72;
-    ctx.strokeStyle = 'rgba(167, 235, 255, 0.72)';
+    ctx.strokeStyle = 'rgba(12, 66, 150, 0.84)';
     ctx.lineWidth = 2.2;
-    for (let x = -state.height; x < state.width + state.height * 0.35; x += 16) {
-      const offset = (now * 0.58) % 16;
+    for (let i = 0; i < Math.ceil(state.width / 5); i++) {
+      const length = 38 + rainSeed(i, 2) * 34;
+      const x = rainSeed(i, 1) * (state.width + state.height * 0.48) - state.height * 0.24;
+      const y = (rainSeed(i, 3) * rainTravelHeight + now * (0.54 + rainSeed(i, 4) * 0.2)) % rainTravelHeight - 100;
+      const slant = length * (0.18 + rainSeed(i, 5) * 0.1);
+      ctx.globalAlpha = 0.58 + rainSeed(i, 6) * 0.22;
+      ctx.setLineDash([7 + rainSeed(i, 7) * 4, 5 + rainSeed(i, 8) * 4]);
+      ctx.lineDashOffset = -now * (0.035 + rainSeed(i, 9) * 0.02);
       ctx.beginPath();
-      ctx.moveTo(x + offset, 0);
-      ctx.lineTo(x + offset + state.height * 0.28, state.height);
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + slant, y + length);
       ctx.stroke();
     }
+    ctx.setLineDash([]);
 
-    ctx.globalAlpha = 0.36;
-    ctx.strokeStyle = 'rgba(230, 250, 255, 0.7)';
+    ctx.strokeStyle = 'rgba(24, 89, 178, 0.82)';
     ctx.lineWidth = 1;
-    for (let x = -state.height; x < state.width + state.height * 0.4; x += 34) {
-      const offset = (now * 0.86) % 34;
+    for (let i = 0; i < Math.ceil(state.width / 8); i++) {
+      const length = 24 + rainSeed(i, 12) * 26;
+      const x = rainSeed(i, 11) * (state.width + state.height * 0.5) - state.height * 0.25;
+      const y = (rainSeed(i, 13) * rainTravelHeight + now * (0.72 + rainSeed(i, 14) * 0.24)) % rainTravelHeight - 100;
+      const slant = length * (0.18 + rainSeed(i, 15) * 0.12);
+      ctx.globalAlpha = 0.32 + rainSeed(i, 16) * 0.2;
+      ctx.setLineDash([4 + rainSeed(i, 17) * 3, 4 + rainSeed(i, 18) * 4]);
+      ctx.lineDashOffset = -now * (0.024 + rainSeed(i, 19) * 0.018);
       ctx.beginPath();
-      ctx.moveTo(x + offset, -20);
-      ctx.lineTo(x + offset + state.height * 0.34, state.height + 20);
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + slant, y + length);
       ctx.stroke();
     }
+    ctx.setLineDash([]);
 
-    ctx.globalAlpha = 0.26;
-    ctx.fillStyle = 'rgba(198, 239, 255, 0.64)';
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = 'rgba(17, 72, 148, 0.68)';
     for (let i = 0; i < 16; i++) {
       const x = (i * 53 + now * 0.09) % state.width;
       const y = state.height - 18 - (i % 4) * 13;
@@ -512,31 +530,31 @@ function drawEnvironmentEventEffects(ctx, now) {
   }
 
   if (classes.includes('event-wind')) {
-    ctx.globalAlpha = 0.16;
-    ctx.fillStyle = 'rgba(210, 248, 255, 0.5)';
+    ctx.globalAlpha = 0.24;
+    ctx.fillStyle = 'rgba(185, 244, 255, 0.58)';
     ctx.fillRect(0, 0, state.width, state.height);
 
-    ctx.globalAlpha = 0.72;
+    ctx.globalAlpha = 0.86;
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.88)';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.lineCap = 'round';
-    for (let y = state.dangerY + 14; y < state.height; y += 34) {
-      const offset = (now * 0.34 + y * 2.7) % (state.width + 190);
+    for (let y = state.dangerY + 10; y < state.height; y += 24) {
+      const offset = (now * 0.58 + y * 2.7) % (state.width + 220);
       ctx.beginPath();
-      ctx.moveTo(offset - 190, y);
-      ctx.quadraticCurveTo(offset - 116, y - 20, offset - 28, y - 3);
-      ctx.quadraticCurveTo(offset + 26, y + 8, offset + 72, y - 8);
+      ctx.moveTo(offset - 220, y);
+      ctx.quadraticCurveTo(offset - 142, y - 24, offset - 48, y - 4);
+      ctx.quadraticCurveTo(offset + 18, y + 10, offset + 92, y - 10);
       ctx.stroke();
     }
 
-    ctx.globalAlpha = 0.42;
+    ctx.globalAlpha = 0.58;
     ctx.strokeStyle = 'rgba(116, 211, 230, 0.9)';
-    ctx.lineWidth = 1.6;
-    for (let y = state.dangerY + 28; y < state.height; y += 22) {
-      const offset = (now * 0.52 + y * 1.9) % (state.width + 130);
+    ctx.lineWidth = 2.2;
+    for (let y = state.dangerY + 18; y < state.height; y += 16) {
+      const offset = (now * 0.82 + y * 1.9) % (state.width + 160);
       ctx.beginPath();
-      ctx.moveTo(offset - 130, y);
-      ctx.lineTo(offset - 38, y - 5);
+      ctx.moveTo(offset - 160, y);
+      ctx.lineTo(offset - 42, y - 7);
       ctx.stroke();
     }
   }

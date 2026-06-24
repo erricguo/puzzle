@@ -45,6 +45,22 @@ debugCorruptionButton.addEventListener('click', () => {
   debugUnlockCorruption();
   playClickSound();
 });
+debugHarvestButton.addEventListener('click', () => {
+  debugTriggerEnvironmentEvent('harvest');
+  playClickSound();
+});
+debugWindButton.addEventListener('click', () => {
+  debugTriggerEnvironmentEvent('strong_wind');
+  playClickSound();
+});
+debugRainButton.addEventListener('click', () => {
+  debugTriggerEnvironmentEvent('heavy_rain');
+  playClickSound();
+});
+debugPestButton.addEventListener('click', () => {
+  debugTriggerEnvironmentEvent('pest');
+  playClickSound();
+});
 startButton.addEventListener('click', startGame);
 startScene.addEventListener('click', startGame);
 startDailyButton.addEventListener('click', (event) => {

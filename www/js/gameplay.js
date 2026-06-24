@@ -240,13 +240,14 @@ function mergeVegetables(a, b) {
     const combo = registerCombo();
     pushComboBurst(midpoint.x, midpoint.y, combo);
     playMergeSound(combo, nextLevel);
-    const scoreGain = scoreWithComboBonus(nextLevel + 1, combo);
+    const baseScore = MERGE_SCORE_BY_LEVEL[nextLevel] ?? (nextLevel + 1);
+    const scoreGain = scoreWithComboBonus(baseScore, combo);
     state.score += scoreGain;
     recordDailyMissionProgress('merge', 1);
     recordDailyMissionProgress('combo', combo);
     recordDailyMissionProgress('level', nextLevel + 1);
     recordDailyMissionProgress('score', scoreGain);
-    gainExperience(nextLevel + 1, combo);
+    gainExperience(scoreGain);
     updateHud();
   });
 }
@@ -276,10 +277,11 @@ function resetGame() {
   state.debugCorruptionUnlocked = false;
   state.activeEnvironmentEvents = [];
   state.environmentEventsPausedAt = 0;
-  state.triggeredEnvironmentEvents = [];
+  state.nextEnvironmentEventRollAt = 0;
   state.scoreSaved = false;
   leaderboardState.recentScoreRow = null;
   leaderboardState.recentScoreRank = null;
+  leaderboardState.recentComboRank = null;
   comboBursts.length = 0;
   gameOverPanel.hidden = true;
   pausePanel.hidden = true;
@@ -302,24 +304,14 @@ function startGame() {
 }
 
 function finishGameLegacy() {
-  if (state.gameOver) return;
-  state.gameOver = true;
-  state.aiming = false;
-  state.paused = false;
-  engine.timing.timeScale = 1;
-  pausePanel.hidden = true;
-  skillPanel.hidden = true;
-  pauseButton.textContent = '暫停';
-  finalScoreEl.textContent = `分數 ${state.score}`;
-  finalComboEl.textContent = `最高 Combo ${state.bestCombo}`;
-  gameOverPanel.hidden = false;
-  stopMusic();
-  playGameOverSound();
-  submitLeaderboardScore();
+  return finishGame({
+    openScoreLeaderboard: true,
+    showGameOverPanel: false
+  });
 }
 
 async function finishGame(options = {}) {
-  const { openScoreLeaderboard = false, showGameOverPanel = true } = options;
+  const { openScoreLeaderboard = true, showGameOverPanel = false } = options;
   if (state.gameOver) return;
 
   state.gameOver = true;
@@ -336,10 +328,14 @@ async function finishGame(options = {}) {
   stopMusic();
   playGameOverSound();
   recordDailyMissionProgress('play', 1);
-  await submitLeaderboardScore();
-
+  const scoreSubmit = submitLeaderboardScore();
   if (openScoreLeaderboard) {
     openLeaderboard('score');
+  }
+  await scoreSubmit;
+
+  if (openScoreLeaderboard && !leaderboardScene.hidden) {
+    loadLeaderboard();
   }
 }
 
@@ -364,7 +360,6 @@ function returnToStartScene() {
   state.pointerId = null;
   state.score = 0;
   state.scoreRemainder = 0;
-  state.expRemainder = 0;
   state.bestLevel = 1;
   state.combo = 0;
   state.bestCombo = 0;
@@ -374,9 +369,10 @@ function returnToStartScene() {
   state.scoreSaved = false;
   state.activeEnvironmentEvents = [];
   state.environmentEventsPausedAt = 0;
-  state.triggeredEnvironmentEvents = [];
+  state.nextEnvironmentEventRollAt = 0;
   leaderboardState.recentScoreRow = null;
   leaderboardState.recentScoreRank = null;
+  leaderboardState.recentComboRank = null;
   comboBursts.length = 0;
   engine.timing.timeScale = 1;
   resetSkillState();
@@ -397,6 +393,7 @@ function checkDangerLine() {
   if (!state.hasStarted || state.paused || state.gameOver) return;
   const now = performance.now();
   updateEnvironmentEvents(now);
+  updateStrongWind(now);
   updateRainFriction(now);
   updateActiveSkills(now);
   updateCorruption(now);
@@ -418,7 +415,9 @@ function checkDangerLine() {
 }
 
 function isCorruptionUnlocked() {
-  return state.debugCorruptionUnlocked || state.playerLevel >= CORRUPTION_UNLOCK_LEVEL;
+  return state.debugCorruptionUnlocked
+    || state.playerLevel >= CORRUPTION_UNLOCK_LEVEL
+    || isEnvironmentEventActive('pest');
 }
 
 function corruptionDurationForLevel(level) {
@@ -435,6 +434,18 @@ function updateRainFriction(now = performance.now()) {
     if (Math.abs(body.friction - targetFriction) > 0.0001) {
       body.friction = targetFriction;
     }
+  }
+}
+
+function updateStrongWind(now = performance.now()) {
+  if (!isEnvironmentEventActive('strong_wind', now)) return;
+
+  for (const body of Composite.allBodies(world)) {
+    if (body.label !== 'vegetable' || body.isMerging || body.isBlasting) continue;
+    Body.applyForce(body, body.position, {
+      x: windForceForBody(body, now) * body.mass,
+      y: 0
+    });
   }
 }
 
@@ -455,6 +466,7 @@ function isProtectedByPumpkinAura(body, pumpkins = pumpkinAuraSources()) {
 
 function updateCorruption(now = performance.now()) {
   if (!isCorruptionUnlocked()) {
+    state.corruptionActive = false;
     state.corruptionLastAt = now;
     return;
   }

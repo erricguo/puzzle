@@ -22,6 +22,19 @@ const VEGETABLES = [
   { name: '南瓜', imageSrc: 'assets/vegetables/10-pumpkin.png', color: '#e58a2f', radius: 68 }
 ];
 
+const MERGE_SCORE_BY_LEVEL = [
+  0,
+  5,
+  15,
+  30,
+  60,
+  150,
+  400,
+  1000,
+  3000,
+  8000
+];
+
 const vegetableImages = VEGETABLES.map((vegetable) => {
   const image = new Image();
   image.src = vegetable.imageSrc;
@@ -33,6 +46,7 @@ const COMBO_GROWTH = 1.05;
 const COMBO_MAX_DURATION = 2000;
 const COMBO_IMPACT_DURATION = 520;
 const COMBO_SHAKE_DURATION = 280;
+const COMBO_SCORE_STEP = 0.1;
 const COMBO_COLORS = ['#68d84d', '#ffd447', '#ff8c32', '#ff5bbd', '#8d70ff', '#35d7ff'];
 const BACKGROUND_MUSIC_SRC = 'assets/sound/Juice%20Merge%20Parade.mp3';
 
@@ -43,10 +57,11 @@ const PUMPKIN_AURA_RADIUS = 150;
 
 const ENV_EVENT_DURATION = 30000;
 const HARVEST_EVENT_DURATION = 15000;
-const STRONG_WIND_LEVEL = 20;
-const HEAVY_RAIN_LEVEL = 40;
-const PEST_LEVEL = 60;
-const STRONG_WIND_FORCE = 2.2;
+const ENV_EVENT_RANDOM_UNLOCK_LEVEL = 20;
+const ENV_EVENT_RANDOM_ROLL_INTERVAL = 10000;
+const ENV_EVENT_RANDOM_CHANCE = 0.12;
+const STRONG_WIND_FORCE = 3.4;
+const STRONG_WIND_BODY_FORCE = 0.00038;
 const HEAVY_RAIN_FRICTION_MULTIPLIER = 0.32;
 const PEST_CORRUPTION_MULTIPLIER = 1.8;
 const PEST_AFFECT_CHANCE = 0.45;

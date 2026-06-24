@@ -24,6 +24,7 @@ const ENVIRONMENT_EVENT_DEFS = {
     duration: HARVEST_EVENT_DURATION
   }
 };
+const RANDOM_ENVIRONMENT_EVENT_IDS = ['harvest', 'strong_wind', 'heavy_rain', 'pest'];
 
 function triggerEnvironmentEvent(id, now = performance.now()) {
   const def = ENVIRONMENT_EVENT_DEFS[id];
@@ -42,26 +43,38 @@ function triggerEnvironmentEvent(id, now = performance.now()) {
   });
 }
 
-function triggerEnvironmentEventOnce(id, level, now = performance.now()) {
-  const key = `${id}:${level}`;
-  if (state.triggeredEnvironmentEvents.includes(key)) return;
-  state.triggeredEnvironmentEvents.push(key);
-  triggerEnvironmentEvent(id, now);
+function checkLevelEnvironmentEvents(fromLevel, toLevel) {
+  if (fromLevel < ENV_EVENT_RANDOM_UNLOCK_LEVEL && toLevel >= ENV_EVENT_RANDOM_UNLOCK_LEVEL) {
+    state.nextEnvironmentEventRollAt = 0;
+  }
 }
 
-function checkLevelEnvironmentEvents(fromLevel, toLevel) {
-  const now = performance.now();
-  for (let level = fromLevel + 1; level <= toLevel; level++) {
-    if (level === STRONG_WIND_LEVEL) triggerEnvironmentEventOnce('strong_wind', level, now);
-    if (level === HEAVY_RAIN_LEVEL) triggerEnvironmentEventOnce('heavy_rain', level, now);
-    if (level === PEST_LEVEL) triggerEnvironmentEventOnce('pest', level, now);
-    if (level > 0 && level % 10 === 0) triggerEnvironmentEvent('harvest', now);
+function rollRandomEnvironmentEvents(now) {
+  if (state.playerLevel < ENV_EVENT_RANDOM_UNLOCK_LEVEL) {
+    state.nextEnvironmentEventRollAt = 0;
+    return;
   }
+
+  if (!state.nextEnvironmentEventRollAt) {
+    state.nextEnvironmentEventRollAt = now + ENV_EVENT_RANDOM_ROLL_INTERVAL;
+    return;
+  }
+
+  if (now < state.nextEnvironmentEventRollAt) return;
+
+  for (const id of RANDOM_ENVIRONMENT_EVENT_IDS) {
+    if (isEnvironmentEventActive(id, now)) continue;
+    if (Math.random() < ENV_EVENT_RANDOM_CHANCE) {
+      triggerEnvironmentEvent(id, now);
+    }
+  }
+  state.nextEnvironmentEventRollAt = now + ENV_EVENT_RANDOM_ROLL_INTERVAL;
 }
 
 function updateEnvironmentEvents(now = performance.now()) {
   if (state.environmentEventsPausedAt) return;
   state.activeEnvironmentEvents = state.activeEnvironmentEvents.filter((event) => now < event.expiresAt);
+  rollRandomEnvironmentEvents(now);
 }
 
 function environmentEventNow(now = performance.now()) {
@@ -98,7 +111,13 @@ function environmentComboBonus(now = performance.now()) {
 
 function windVelocityOffset(now = performance.now()) {
   if (!isEnvironmentEventActive('strong_wind', now)) return 0;
-  return Math.sin(now * 0.003) * STRONG_WIND_FORCE + (Math.random() - 0.5) * 0.8;
+  return Math.sin(now * 0.0034) * STRONG_WIND_FORCE + (Math.random() - 0.5) * 1.1;
+}
+
+function windForceForBody(body, now = performance.now()) {
+  if (!isEnvironmentEventActive('strong_wind', now)) return 0;
+  const gust = Math.sin(now * 0.0034) + Math.sin(now * 0.008 + body.id) * 0.35;
+  return gust * STRONG_WIND_BODY_FORCE;
 }
 
 function rainFrictionFor(baseFriction, now = performance.now()) {

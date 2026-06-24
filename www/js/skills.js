@@ -1,7 +1,7 @@
 const SKILL_CHOICES_PER_PICK = 3;
 const TEMP_SKILL_DURATION = 5000;
-const EXP_BASE_REQUIREMENT = 12;
-const EXP_GROWTH_PER_LEVEL = 4;
+const EXP_BASE_REQUIREMENT = 100;
+const EXP_GROWTH_MULTIPLIER = 1.1;
 const BLAST_RADIUS_MULTIPLIER = 2.15;
 const BLAST_MIN_RADIUS = 48;
 const BLAST_MAX_RADIUS = 150;
@@ -10,6 +10,7 @@ const FERTILIZER_ANIMATION_DURATION = 620;
 const FERTILIZER_IMAGE_SRC = 'assets/images/fertilizer.png';
 const PERMANENT_SKILL_MAX_STACKS = 5;
 const SKILL_CHOICE_UNLOCK_DELAY = 1500;
+const SKILL_CHOICE_LEVEL_INTERVAL = 10;
 const DISABLED_SKILL_IDS = new Set(['fertilizer']);
 
 const fertilizerImage = new Image();
@@ -41,7 +42,7 @@ const SKILL_POOL = [
     id: 'combo_score',
     name: 'Combo 強化',
     type: '永久',
-    description: 'COMBO 分數加成永久 +40%。',
+    description: 'COMBO 分數加成永久 +10%。',
     apply: () => {
       state.comboScoreBonus += 1;
     }
@@ -74,19 +75,19 @@ const SKILL_POOL = [
 ];
 
 function expRequiredForLevel(level) {
-  return EXP_BASE_REQUIREMENT + (level - 1) * EXP_GROWTH_PER_LEVEL;
+  return Math.round(EXP_BASE_REQUIREMENT * Math.pow(EXP_GROWTH_MULTIPLIER, level - 1));
 }
 
-function gainExperience(amount, combo = 0) {
+function gainExperience(amount) {
   if (!amount || state.gameOver) return;
 
   const startLevel = state.playerLevel;
-  state.exp += experienceWithComboBonus(amount, combo);
+  state.exp += amount;
   while (state.exp >= state.expToNext) {
     state.exp -= state.expToNext;
     state.playerLevel += 1;
     state.expToNext = expRequiredForLevel(state.playerLevel);
-    if (state.playerLevel % 5 === 0) {
+    if (state.playerLevel % SKILL_CHOICE_LEVEL_INTERVAL === 0) {
       state.pendingSkillChoices += 1;
     }
   }
@@ -140,7 +141,7 @@ function debugAddLevels(levels = 10) {
   const fromLevel = state.playerLevel;
   const toLevel = fromLevel + levels;
   for (let level = fromLevel + 1; level <= toLevel; level++) {
-    if (level % 5 === 0) {
+    if (level % SKILL_CHOICE_LEVEL_INTERVAL === 0) {
       state.pendingSkillChoices += 1;
     }
   }
@@ -148,7 +149,6 @@ function debugAddLevels(levels = 10) {
   state.playerLevel = toLevel;
   checkLevelEnvironmentEvents(fromLevel, toLevel);
   state.exp = 0;
-  state.expRemainder = 0;
   state.expToNext = expRequiredForLevel(state.playerLevel);
   updateHud();
   closeDebugPanel();
@@ -161,6 +161,15 @@ function debugUnlockCorruption() {
   state.debugCorruptionUnlocked = true;
   state.corruptionActive = true;
   state.corruptionLastAt = performance.now();
+  closeDebugPanel();
+  updateHud();
+}
+
+function debugTriggerEnvironmentEvent(id) {
+  if (!state.hasStarted || state.gameOver) return;
+
+  triggerEnvironmentEvent(id);
+  updateGravity();
   closeDebugPanel();
   updateHud();
 }
@@ -493,7 +502,6 @@ function applyFertilizerToVegetable(target, fertilizer) {
     level: nextLevel
   });
   playMergeSound(Math.max(1, state.combo), nextLevel);
-  gainExperience(nextLevel + 1, state.combo);
   updateHud();
   return true;
 }
@@ -548,7 +556,6 @@ function blastRadiusFor(body) {
 function resetSkillState() {
   state.playerLevel = 1;
   state.exp = 0;
-  state.expRemainder = 0;
   state.expToNext = expRequiredForLevel(1);
   state.corruptionActive = false;
   state.corruptionLastAt = 0;

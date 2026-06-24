@@ -25,7 +25,7 @@ function comboColor(combo) {
 }
 
 function comboScoreMultiplier(combo) {
-  return combo > 0 ? 1 + (combo + state.comboScoreBonus) * 0.4 : 1;
+  return combo > 0 ? 1 + (combo + state.comboScoreBonus) * COMBO_SCORE_STEP : 1;
 }
 
 function scoreWithComboBonus(baseScore, combo) {
@@ -35,15 +35,6 @@ function scoreWithComboBonus(baseScore, combo) {
   const carriedScore = Math.floor(state.scoreRemainder);
   state.scoreRemainder -= carriedScore;
   return wholeScore + carriedScore;
-}
-
-function experienceWithComboBonus(baseExperience, combo) {
-  const rawExperience = baseExperience * comboScoreMultiplier(combo);
-  const wholeExperience = Math.floor(rawExperience);
-  state.expRemainder += rawExperience - wholeExperience;
-  const carriedExperience = Math.floor(state.expRemainder);
-  state.expRemainder -= carriedExperience;
-  return wholeExperience + carriedExperience;
 }
 
 function clearExpiredCombo(now = performance.now()) {

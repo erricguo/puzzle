@@ -158,6 +158,7 @@ async function submitLeaderboardScore() {
   saveLocalLeaderboard();
   leaderboardState.recentScoreRow = row;
   leaderboardState.recentScoreRank = await calculateScoreRank(row);
+  leaderboardState.recentComboRank = await calculateComboRank(row);
 
   if (!leaderboardState.client) return row;
 
@@ -177,6 +178,7 @@ async function submitLeaderboardScore() {
     Object.assign(row, data);
     leaderboardState.recentScoreRow = row;
     leaderboardState.recentScoreRank = await calculateScoreRank(row);
+    leaderboardState.recentComboRank = await calculateComboRank(row);
   }
 
   if (error) {
@@ -202,6 +204,29 @@ async function calculateScoreRank(row) {
 
   if (error) {
     console.warn('Leaderboard rank calculation failed', error);
+    return null;
+  }
+
+  return (count || 0) + 1;
+}
+
+async function calculateComboRank(row) {
+  if (!row || row.best_combo <= 0) return null;
+
+  if (!leaderboardState.client) {
+    const sorted = [...leaderboardState.localRows]
+      .sort((a, b) => b.best_combo - a.best_combo || b.score - a.score || a.created_at.localeCompare(b.created_at));
+    const index = sorted.findIndex((item) => isRecentScoreRow(item, row));
+    return index >= 0 ? index + 1 : null;
+  }
+
+  const { count, error } = await leaderboardState.client
+    .from('vegetable_merge_scores')
+    .select('id', { count: 'exact', head: true })
+    .gt('best_combo', row.best_combo);
+
+  if (error) {
+    console.warn('Leaderboard combo rank calculation failed', error);
     return null;
   }
 
@@ -316,6 +341,13 @@ function renderLeaderboard() {
     return;
   }
 
+  if (leaderboardState.recentScoreRow && leaderboardState.activeTab === 'combo') {
+    leaderboardMessageEl.textContent = leaderboardState.recentComboRank
+      ? `本局 COMBO 第 ${leaderboardState.recentComboRank} 名`
+      : '本局 COMBO 已送出';
+    return;
+  }
+
   if (state.gameOver && state.score <= 0 && leaderboardState.activeTab === 'score') {
     leaderboardMessageEl.textContent = '本局沒有分數，未列入排行榜';
     return;
@@ -338,6 +370,6 @@ function openLeaderboard(tab = leaderboardState.activeTab) {
 function closeLeaderboard() {
   leaderboardScene.hidden = true;
   if (state.gameOver && state.hasStarted && startScene.hidden) {
-    gameOverPanel.hidden = false;
+    returnToStartScene();
   }
 }
