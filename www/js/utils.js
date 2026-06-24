@@ -30,6 +30,42 @@ function loadLocalLeaderboard() {
   }
 }
 
+function loadEncyclopediaLevels() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('veggieMergeEncyclopediaLevels') || '[0]');
+    const levels = Array.isArray(stored) ? stored : [0];
+    const validLevels = levels
+      .map((level) => Number(level))
+      .filter((level) => Number.isInteger(level) && level >= 0 && level < VEGETABLES.length);
+    return [...new Set([0, ...validLevels])].sort((a, b) => a - b);
+  } catch {
+    return [0];
+  }
+}
+
+function loadDailyMissionState() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('veggieMergeDailyMissions') || '{}');
+    return stored && typeof stored === 'object' ? stored : {};
+  } catch {
+    return {};
+  }
+}
+
+function loadPlayerCoins() {
+  const coins = Number(localStorage.getItem('veggieMergeCoins') || 0);
+  return Number.isFinite(coins) && coins > 0 ? Math.floor(coins) : 0;
+}
+
+function loadOwnedTalents() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('veggieMergeOwnedTalents') || '[]');
+    return Array.isArray(stored) ? stored.filter((id) => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';

@@ -65,7 +65,7 @@
           </button>
         </div>
         <button id="resumeButton" class="resume-button" type="button">繼續遊戲</button>
-        <button id="restartButton" class="quiet-button" type="button" aria-label="重新開始">重新開始</button>
+        <button id="endGameButton" class="danger-button" type="button">結束遊戲</button>
       </div>
       <div id="skillPanel" class="skill-panel" hidden>
         <div class="skill-panel-inner">
@@ -103,13 +103,77 @@
         <span>合併、累積 COMBO，衝出更高分數。</span>
       </div>
       <div class="start-badges" aria-label="遊戲特色">
+        <span id="coinBadge" class="coin-badge">
+          <img src="assets/images/coin.png" alt="" />
+          <b>0</b>
+        </span>
         <span>10 種蔬菜</span>
         <span>連鎖 COMBO</span>
         <span>排行榜</span>
       </div>
+      <div class="account-row start-account">
+        <span id="accountStatus">尚未登入，排行榜將使用本機資料。</span>
+        <button id="googleSignInButton" type="button">Google 登入</button>
+      </div>
       <div class="start-actions">
         <button id="startButton" class="start-button" type="button">開始遊戲</button>
+        <button id="startDailyButton" class="ghost-button daily-button" type="button">每日任務</button>
+        <button id="startTalentButton" class="ghost-button talent-button" type="button">天賦商店</button>
+        <button id="startEncyclopediaButton" class="ghost-button book-button" type="button">蔬菜圖鑑</button>
         <button id="startLeaderboardButton" class="ghost-button" type="button">查看排行榜</button>
+      </div>
+    </section>
+
+    <section id="dailyScene" class="daily-scene" aria-label="每日任務" hidden>
+      <div class="daily-panel">
+        <header class="leaderboard-header">
+          <div>
+            <p id="dailySummary">今日任務 0/3</p>
+            <h2>每日任務</h2>
+          </div>
+          <button id="closeDailyButton" class="icon-button" type="button" aria-label="關閉每日任務">×</button>
+        </header>
+
+        <div id="dailyCoinWallet" class="coin-wallet">
+          <img src="assets/images/coin.png" alt="" />
+          <b>0</b>
+        </div>
+        <div id="dailyMissionList" class="daily-mission-list" aria-label="每日任務列表"></div>
+        <p id="dailyResetText" class="daily-reset-text">每日 00:00 更新</p>
+      </div>
+    </section>
+
+    <section id="talentScene" class="talent-scene" aria-label="開局天賦商店" hidden>
+      <div class="talent-panel">
+        <header class="leaderboard-header">
+          <div>
+            <p id="talentSummary">永久天賦</p>
+            <h2>天賦商店</h2>
+          </div>
+          <button id="closeTalentButton" class="icon-button" type="button" aria-label="關閉天賦商店">×</button>
+        </header>
+
+        <div id="talentCoinWallet" class="coin-wallet">
+          <img src="assets/images/coin.png" alt="" />
+          <b>0</b>
+        </div>
+        <div id="talentList" class="talent-list" aria-label="天賦列表"></div>
+        <p class="talent-note">已購買的天賦會在每局開始時自動生效。</p>
+      </div>
+    </section>
+
+    <section id="encyclopediaScene" class="encyclopedia-scene" aria-label="蔬菜圖鑑" hidden>
+      <div class="encyclopedia-panel">
+        <header class="leaderboard-header">
+          <div>
+            <p id="encyclopediaSummary">已解鎖 1/10</p>
+            <h2>蔬菜圖鑑</h2>
+          </div>
+          <button id="closeEncyclopediaButton" class="icon-button" type="button" aria-label="關閉蔬菜圖鑑">×</button>
+        </header>
+
+        <div id="encyclopediaBest" class="encyclopedia-best">最高合成：1 層 豌豆</div>
+        <div id="encyclopediaGrid" class="encyclopedia-grid" aria-label="蔬菜圖鑑列表"></div>
       </div>
     </section>
 
@@ -122,11 +186,6 @@
           <button id="closeLeaderboardButton" class="icon-button" type="button" aria-label="關閉排行榜">×</button>
         </header>
 
-        <div class="account-row">
-          <span id="accountStatus">尚未登入，排行榜將使用本機資料。</span>
-          <button id="googleSignInButton" type="button">Google 登入</button>
-        </div>
-
         <div class="leaderboard-tabs" role="tablist" aria-label="排行榜分頁">
           <button id="scoreTabButton" class="active" type="button">分數榜</button>
           <button id="comboTabButton" type="button">Combo</button>
@@ -134,6 +193,7 @@
 
         <ol id="leaderboardList" class="leaderboard-list"></ol>
         <p id="leaderboardMessage" class="leaderboard-message">載入中...</p>
+        <button id="leaderboardHomeButton" class="leaderboard-home-button" type="button">返回主畫面</button>
       </div>
     </section>
   </main>
@@ -151,7 +211,10 @@
   <script src="js/dom.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/state.js"></script>
+  <script src="js/daily-missions.js"></script>
+  <script src="js/talents.js"></script>
   <script src="js/leaderboard.js"></script>
+  <script src="js/encyclopedia.js"></script>
   <script src="js/ads.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/hud-combo.js"></script>

@@ -16,6 +16,10 @@ const state = {
   fpsValue: 0,
   fpsFrames: 0,
   fpsLastAt: 0,
+  encyclopediaUnlockedLevels: loadEncyclopediaLevels(),
+  dailyMissionState: loadDailyMissionState(),
+  coins: loadPlayerCoins(),
+  ownedTalents: loadOwnedTalents(),
   bestLevel: 1,
   nextLevel: 0,
   aiming: false,
@@ -90,6 +94,8 @@ const leaderboardState = {
   authSubscription: null,
   user: null,
   isAuthBusy: false,
+  recentScoreRow: null,
+  recentScoreRank: null,
   guestPlayerId: localStorage.getItem('veggieMergeGuestPlayerId')
     || localStorage.getItem('veggieMergePlayerId')
     || createPlayerId(),

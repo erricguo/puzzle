@@ -34,3 +34,31 @@ create policy "Anyone can submit vegetable scores"
     and best_level between 1 and 10
     and length(player_name) between 1 and 40
   );
+
+create table if not exists public.vegetable_encyclopedia_unlocks (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  level integer not null check (level between 0 and 9),
+  unlocked_at timestamptz not null default now(),
+  primary key (user_id, level)
+);
+
+create index if not exists vegetable_encyclopedia_unlocks_user_level_idx
+  on public.vegetable_encyclopedia_unlocks (user_id, level);
+
+alter table public.vegetable_encyclopedia_unlocks enable row level security;
+
+grant select, insert on public.vegetable_encyclopedia_unlocks to authenticated;
+
+drop policy if exists "Players can read their encyclopedia unlocks" on public.vegetable_encyclopedia_unlocks;
+create policy "Players can read their encyclopedia unlocks"
+  on public.vegetable_encyclopedia_unlocks
+  for select
+  to authenticated
+  using (auth.uid() = user_id);
+
+drop policy if exists "Players can save their encyclopedia unlocks" on public.vegetable_encyclopedia_unlocks;
+create policy "Players can save their encyclopedia unlocks"
+  on public.vegetable_encyclopedia_unlocks
+  for insert
+  to authenticated
+  with check (auth.uid() = user_id);

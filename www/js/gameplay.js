@@ -231,13 +231,19 @@ function mergeVegetables(a, b) {
     Composite.remove(world, [a, b]);
     if (state.gameOver) return;
     const merged = createVegetable(nextLevel, midpoint.x, midpoint.y);
+    unlockEncyclopediaLevel(nextLevel);
     Body.setVelocity(merged, { x: carryVelocity.x, y: Math.min(carryVelocity.y - 2.4, -1.2) });
     Body.setAngle(merged, (a.angle + b.angle) / 2);
     Body.setAngularVelocity(merged, (Math.random() - 0.5) * 0.26);
     const combo = registerCombo();
     pushComboBurst(midpoint.x, midpoint.y, combo);
     playMergeSound(combo, nextLevel);
-    state.score += scoreWithComboBonus(nextLevel + 1, combo);
+    const scoreGain = scoreWithComboBonus(nextLevel + 1, combo);
+    state.score += scoreGain;
+    recordDailyMissionProgress('merge', 1);
+    recordDailyMissionProgress('combo', combo);
+    recordDailyMissionProgress('level', nextLevel + 1);
+    recordDailyMissionProgress('score', scoreGain);
     gainExperience(nextLevel + 1, combo);
     updateHud();
   });
@@ -267,12 +273,15 @@ function resetGame() {
   state.corruptionLastAt = 0;
   state.debugCorruptionUnlocked = false;
   state.scoreSaved = false;
+  leaderboardState.recentScoreRow = null;
+  leaderboardState.recentScoreRank = null;
   comboBursts.length = 0;
   gameOverPanel.hidden = true;
   pausePanel.hidden = true;
   skillPanel.hidden = true;
   pauseButton.textContent = '暫停';
   setNextLevel();
+  applyStartTalents();
   updateHud();
   startMusic();
 }
@@ -287,7 +296,7 @@ function startGame() {
   resetGame();
 }
 
-function finishGame() {
+function finishGameLegacy() {
   if (state.gameOver) return;
   state.gameOver = true;
   state.aiming = false;
@@ -302,6 +311,78 @@ function finishGame() {
   stopMusic();
   playGameOverSound();
   submitLeaderboardScore();
+}
+
+async function finishGame(options = {}) {
+  const { openScoreLeaderboard = false, showGameOverPanel = true } = options;
+  if (state.gameOver) return;
+
+  state.gameOver = true;
+  state.aiming = false;
+  state.paused = false;
+  engine.timing.timeScale = 1;
+  pausePanel.hidden = true;
+  skillPanel.hidden = true;
+  debugPanel.hidden = true;
+  pauseButton.textContent = '暫停';
+  finalScoreEl.textContent = `分數 ${state.score}`;
+  finalComboEl.textContent = `最高 Combo ${state.bestCombo}`;
+  gameOverPanel.hidden = !showGameOverPanel;
+  stopMusic();
+  playGameOverSound();
+  recordDailyMissionProgress('play', 1);
+  await submitLeaderboardScore();
+
+  if (openScoreLeaderboard) {
+    openLeaderboard('score');
+  }
+}
+
+function endCurrentGame() {
+  finishGame({
+    openScoreLeaderboard: true,
+    showGameOverPanel: false
+  });
+}
+
+function returnToStartScene() {
+  for (const body of Composite.allBodies(world)) {
+    if (body.label === 'vegetable' || body.label === 'fertilizer') {
+      Composite.remove(world, body);
+    }
+  }
+
+  state.hasStarted = false;
+  state.gameOver = false;
+  state.paused = false;
+  state.aiming = false;
+  state.pointerId = null;
+  state.score = 0;
+  state.scoreRemainder = 0;
+  state.expRemainder = 0;
+  state.bestLevel = 1;
+  state.combo = 0;
+  state.bestCombo = 0;
+  state.comboDuration = 0;
+  state.comboExpiresAt = 0;
+  state.comboPulseStartedAt = 0;
+  state.scoreSaved = false;
+  leaderboardState.recentScoreRow = null;
+  leaderboardState.recentScoreRank = null;
+  comboBursts.length = 0;
+  engine.timing.timeScale = 1;
+  resetSkillState();
+  leaderboardScene.hidden = true;
+  talentScene.hidden = true;
+  gameOverPanel.hidden = true;
+  pausePanel.hidden = true;
+  skillPanel.hidden = true;
+  debugPanel.hidden = true;
+  startScene.hidden = false;
+  pauseButton.textContent = '暫停';
+  setNextLevel();
+  updateHud();
+  stopMusic();
 }
 
 function checkDangerLine() {

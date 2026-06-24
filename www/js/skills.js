@@ -10,6 +10,7 @@ const FERTILIZER_ANIMATION_DURATION = 620;
 const FERTILIZER_IMAGE_SRC = 'assets/images/fertilizer.png';
 const PERMANENT_SKILL_MAX_STACKS = 5;
 const SKILL_CHOICE_UNLOCK_DELAY = 1500;
+const DISABLED_SKILL_IDS = new Set(['fertilizer']);
 
 const fertilizerImage = new Image();
 fertilizerImage.src = FERTILIZER_IMAGE_SRC;
@@ -113,7 +114,7 @@ function maybeShowSkillPanel() {
   pauseButton.textContent = '繼續';
 
   skillPanelKicker.textContent = `等級 ${state.playerLevel}`;
-  state.skillRefreshesRemaining = 1;
+  state.skillRefreshesRemaining = 1 + talentSkillRefreshBonus();
   setSkillChoices(pickSkillOptions(available));
   updateRefreshSkillButton();
   skillPanel.hidden = false;
@@ -177,7 +178,11 @@ function pickRefreshedSkillOptions(available) {
 }
 
 function availableSkills() {
-  return SKILL_POOL.filter((skill) => !isSkillMaxed(skill));
+  return SKILL_POOL.filter((skill) => !isSkillDisabled(skill) && !isSkillMaxed(skill));
+}
+
+function isSkillDisabled(skill) {
+  return DISABLED_SKILL_IDS.has(skill.id);
 }
 
 function isSkillMaxed(skill) {
@@ -314,7 +319,7 @@ function chooseSkill(skillId) {
   if (performance.now() < state.skillChoicesUnlockAt) return;
 
   const skill = SKILL_POOL.find((item) => item.id === skillId);
-  if (!skill || isSkillMaxed(skill)) return;
+  if (!skill || isSkillDisabled(skill) || isSkillMaxed(skill)) return;
 
   const applied = skill.apply();
   if (applied === false) return;
@@ -382,7 +387,7 @@ function dropCooldownFor(now = performance.now()) {
 
 function updateGravity(now = performance.now()) {
   const temporaryBonus = isFastFallActive(now) ? 0.5 : 0;
-  engine.gravity.y = BASE_GRAVITY_Y * (1 + state.dropSpeedBonus + temporaryBonus);
+  engine.gravity.y = BASE_GRAVITY_Y * (1 + state.dropSpeedBonus + temporaryBonus) * talentGravityMultiplier();
 }
 
 function updateActiveSkills(now = performance.now()) {
@@ -439,6 +444,8 @@ function blastRandomVegetables() {
   }, BLAST_ANIMATION_DURATION);
 
   state.score += toRemove.length;
+  recordDailyMissionProgress('blast', toRemove.length);
+  recordDailyMissionProgress('score', toRemove.length);
   updateHud();
 }
 

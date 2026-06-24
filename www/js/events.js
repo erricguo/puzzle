@@ -47,17 +47,43 @@ debugCorruptionButton.addEventListener('click', () => {
 });
 startButton.addEventListener('click', startGame);
 startScene.addEventListener('click', startGame);
+startDailyButton.addEventListener('click', (event) => {
+  event.stopPropagation();
+  openDailyMissions();
+});
+startTalentButton.addEventListener('click', (event) => {
+  event.stopPropagation();
+  openTalentShop();
+});
+startEncyclopediaButton.addEventListener('click', (event) => {
+  event.stopPropagation();
+  openEncyclopedia();
+});
 startLeaderboardButton.addEventListener('click', (event) => {
   event.stopPropagation();
   openLeaderboard('score');
 });
 gameOverLeaderboardButton.addEventListener('click', () => openLeaderboard('score'));
 closeLeaderboardButton.addEventListener('click', closeLeaderboard);
+dailyScene.addEventListener('click', (event) => event.stopPropagation());
+closeDailyButton.addEventListener('click', closeDailyMissions);
+talentScene.addEventListener('click', (event) => event.stopPropagation());
+closeTalentButton.addEventListener('click', closeTalentShop);
+encyclopediaScene.addEventListener('click', (event) => event.stopPropagation());
+closeEncyclopediaButton.addEventListener('click', closeEncyclopedia);
+leaderboardHomeButton.addEventListener('click', returnToStartScene);
 scoreTabButton.addEventListener('click', () => openLeaderboard('score'));
 comboTabButton.addEventListener('click', () => openLeaderboard('combo'));
-googleSignInButton.addEventListener('click', signInWithGoogle);
+googleSignInButton.closest('.account-row')?.addEventListener('click', (event) => {
+  event.stopPropagation();
+});
+googleSignInButton.addEventListener('click', (event) => {
+  event.stopPropagation();
+  signInWithGoogle();
+});
 pauseButton.addEventListener('click', togglePause);
 resumeButton.addEventListener('click', () => setPaused(false));
+endGameButton.addEventListener('click', endCurrentGame);
 soundButton.addEventListener('click', () => {
   ensureAudio();
   audioState.enabled = !audioState.enabled;
@@ -93,7 +119,6 @@ vibrationToggle.addEventListener('click', () => {
   playClickSound();
   vibrate(28);
 });
-restartButton.addEventListener('click', resetGame);
 playAgainButton.addEventListener('click', resetGame);
 window.addEventListener('resize', resizeGame);
 window.addEventListener('orientationchange', () => setTimeout(resizeGame, 250));
@@ -105,6 +130,7 @@ window.addEventListener('pagehide', () => {
 window.addEventListener('pageshow', updatePageAudioState);
 
 setupSupabase();
+setupDailyMissions();
 setupAudioUi();
 resizeGame();
 setNextLevel();
