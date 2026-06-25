@@ -76,8 +76,24 @@ create table if not exists public.vegetable_player_progress (
   user_id uuid primary key references auth.users(id) on delete cascade,
   coins integer not null default 0 check (coins >= 0),
   owned_talents text[] not null default '{}',
+  revive_tickets integer not null default 0 check (revive_tickets >= 0),
+  bombs integer not null default 0 check (bombs >= 0),
+  daily_missions jsonb not null default '{}'::jsonb,
+  audio_settings jsonb not null default '{}'::jsonb,
+  local_leaderboard jsonb not null default '[]'::jsonb,
+  guest_player_id text,
+  guest_player_name text,
   updated_at timestamptz not null default now()
 );
+
+alter table public.vegetable_player_progress
+  add column if not exists revive_tickets integer not null default 0 check (revive_tickets >= 0),
+  add column if not exists bombs integer not null default 0 check (bombs >= 0),
+  add column if not exists daily_missions jsonb not null default '{}'::jsonb,
+  add column if not exists audio_settings jsonb not null default '{}'::jsonb,
+  add column if not exists local_leaderboard jsonb not null default '[]'::jsonb,
+  add column if not exists guest_player_id text,
+  add column if not exists guest_player_name text;
 
 alter table public.vegetable_player_progress enable row level security;
 

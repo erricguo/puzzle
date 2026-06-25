@@ -8,7 +8,7 @@ function setPaused(paused) {
   engine.timing.timeScale = paused ? 0 : 1;
   pausePanel.hidden = !paused;
   pauseButton.textContent = paused ? '繼續' : '暫停';
-  setNextLevel();
+  updateNextLabelStatus();
   updateHud();
   if (paused) {
     playClickSound();
@@ -266,7 +266,7 @@ function mergeVegetables(a, b) {
     recordDailyMissionProgress('merge', 1);
     recordDailyMissionProgress('combo', combo);
     recordDailyMissionProgress('level', nextLevel + 1);
-    recordDailyMissionProgress('score', scoreGain);
+    recordDailyMissionProgress('score', state.score);
     gainExperience(scoreGain);
     updateHud();
   });
@@ -283,6 +283,7 @@ function resetGame() {
   state.bestLevel = 1;
   state.previewLevel = null;
   state.gameOver = false;
+  state.gameOverActionsLocked = false;
   state.aiming = false;
   state.bombTargeting = false;
   state.bombsUsedThisRun = 0;
@@ -309,6 +310,7 @@ function resetGame() {
   leaderboardState.recentScoreRank = null;
   comboBursts.length = 0;
   gameOverPanel.hidden = true;
+  gameOverPanel.classList.remove('entering');
   pausePanel.hidden = true;
   skillPanel.hidden = true;
   pauseButton.textContent = '暫停';
@@ -349,8 +351,19 @@ async function finishGame(options = {}) {
   pauseButton.textContent = '暫停';
   finalScoreEl.textContent = `分數 ${state.score}`;
   finalComboEl.textContent = `最高 Combo ${state.bestCombo}`;
+  state.gameOverActionsLocked = showGameOverPanel;
   updateReviveButton();
   gameOverPanel.hidden = !showGameOverPanel;
+  gameOverPanel.classList.toggle('entering', showGameOverPanel);
+  setGameOverActionButtonsLocked(showGameOverPanel);
+  if (showGameOverPanel) {
+    window.setTimeout(() => {
+      if (!state.gameOver || gameOverPanel.hidden) return;
+      state.gameOverActionsLocked = false;
+      setGameOverActionButtonsLocked(false);
+      gameOverPanel.classList.remove('entering');
+    }, 1500);
+  }
   stopMusic();
   playGameOverSound();
   recordDailyMissionProgress('play', 1);
@@ -378,10 +391,12 @@ async function playAgainFromGameOver() {
 
 function saveReviveTickets() {
   localStorage.setItem('veggieMergeReviveTickets', String(state.reviveTickets));
+  queuePlayerProgressSync?.();
 }
 
 function saveBombs() {
   localStorage.setItem('veggieMergeBombs', String(state.bombs));
+  queuePlayerProgressSync?.();
 }
 
 function addReviveTickets(amount = 1) {
@@ -400,9 +415,16 @@ function addBombs(amount = 1) {
   updateHud();
 }
 
+function setGameOverActionButtonsLocked(locked) {
+  const canRevive = state.reviveTickets > 0 && !state.reviveUsedThisRun;
+  reviveButton.disabled = locked || !canRevive;
+  gameOverLeaderboardButton.disabled = locked;
+  playAgainButton.disabled = locked;
+}
+
 function updateReviveButton() {
   const canRevive = state.reviveTickets > 0 && !state.reviveUsedThisRun;
-  reviveButton.disabled = !canRevive;
+  reviveButton.disabled = state.gameOverActionsLocked || !canRevive;
   reviveButton.textContent = canRevive
     ? `使用復活券 x${state.reviveTickets}`
     : '沒有可用復活券';
@@ -419,7 +441,7 @@ function activateBombTargeting() {
   state.bombTargeting = !state.bombTargeting;
   state.aiming = false;
   state.pointerId = null;
-  setNextLevel();
+  updateNextLabelStatus();
   updateHud();
   playClickSound();
 }
@@ -447,7 +469,7 @@ function useBombAtPoint(point) {
   ) return;
   const target = findVegetableAtPoint(point);
   if (!target) {
-    setNextLevel();
+    updateNextLabelStatus();
     updateHud();
     return;
   }
@@ -458,7 +480,7 @@ function useBombAtPoint(point) {
   state.bombTargeting = false;
   state.itemBoardRun = true;
   blastVegetablesAround(target, ITEM_BOMB_RADIUS);
-  setNextLevel();
+  updateNextLabelStatus();
   updateHud();
   playClickSound();
 }
@@ -505,7 +527,7 @@ function blastVegetablesAround(target, radius = ITEM_BOMB_RADIUS) {
   const scoreGain = scoreWithGoldenBonus(bodies.length);
   state.score += scoreGain;
   recordDailyMissionProgress('blast', bodies.length);
-  recordDailyMissionProgress('score', scoreGain);
+  recordDailyMissionProgress('score', state.score);
   updateHud();
   return true;
 }
@@ -520,6 +542,7 @@ function useReviveTicket() {
   blastTopVegetables(REVIVE_BLAST_COUNT);
 
   state.gameOver = false;
+  state.gameOverActionsLocked = false;
   state.paused = false;
   state.aiming = false;
   state.pointerId = null;
@@ -533,6 +556,7 @@ function useReviveTicket() {
     });
   engine.timing.timeScale = 1;
   gameOverPanel.hidden = true;
+  gameOverPanel.classList.remove('entering');
   leaderboardScene.hidden = true;
   pausePanel.hidden = true;
   skillPanel.hidden = true;
@@ -585,6 +609,7 @@ function returnToStartScene() {
 
   state.hasStarted = false;
   state.gameOver = false;
+  state.gameOverActionsLocked = false;
   state.paused = false;
   state.aiming = false;
   state.pointerId = null;
@@ -613,6 +638,7 @@ function returnToStartScene() {
   leaderboardScene.hidden = true;
   talentScene.hidden = true;
   gameOverPanel.hidden = true;
+  gameOverPanel.classList.remove('entering');
   pausePanel.hidden = true;
   skillPanel.hidden = true;
   debugPanel.hidden = true;

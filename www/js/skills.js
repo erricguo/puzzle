@@ -225,7 +225,7 @@ function maybeShowSkillPanel() {
   pauseButton.textContent = '繼續';
 
   skillPanelKicker.textContent = `等級 ${state.playerLevel}`;
-  state.skillRefreshesRemaining = 1 + talentSkillRefreshBonus();
+  state.skillRefreshesRemaining = state.skillFreeRefreshUsedThisRun ? 0 : 1;
   setSkillChoices(pickSkillOptions(available));
   updateRefreshSkillButton();
   skillPanel.hidden = false;
@@ -438,6 +438,10 @@ function refreshSkillCards() {
     return;
   }
 
+  performSkillRefresh(true);
+}
+
+function performSkillRefresh(isFreeRefresh = false) {
   const available = availableSkills();
   if (available.length <= SKILL_CHOICES_PER_PICK) {
     state.skillRefreshesRemaining = 0;
@@ -445,7 +449,10 @@ function refreshSkillCards() {
     return;
   }
 
-  state.skillRefreshesRemaining -= 1;
+  if (isFreeRefresh) {
+    state.skillFreeRefreshUsedThisRun = true;
+    state.skillRefreshesRemaining = 0;
+  }
   state.skillChoicesUnlockAt = performance.now() + SKILL_CHOICE_UNLOCK_DELAY;
   setSkillChoices(pickRefreshedSkillOptions(available));
   updateRefreshSkillButton();
@@ -465,7 +472,7 @@ async function requestSkillRefreshAd() {
   try {
     const rewarded = await showRewardedSkillRefreshAd();
     if (rewarded) {
-      state.skillRefreshesRemaining = 1;
+      performSkillRefresh(false);
     }
   } catch (error) {
     console.warn('廣告載入失敗', error);
@@ -887,6 +894,7 @@ function resetSkillState() {
   state.pendingSkillChoices = 0;
   state.isChoosingSkill = false;
   state.skillRefreshesRemaining = 0;
+  state.skillFreeRefreshUsedThisRun = false;
   state.skillRefreshAdBusy = false;
   state.currentSkillChoiceIds = [];
   state.skillChoicesUnlockAt = 0;

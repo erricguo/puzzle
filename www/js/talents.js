@@ -3,13 +3,6 @@ let activeShopTab = 'talent';
 
 const TALENT_DEFS = [
   {
-    id: 'starter_score',
-    name: '開局紅利',
-    cost: 120,
-    summary: '每局開始時直接獲得 100 分。',
-    effect: '開局 +100 分'
-  },
-  {
     id: 'quick_level',
     name: '早熟菜苗',
     cost: 180,
@@ -102,6 +95,11 @@ function hasTalent(id) {
   return state.ownedTalents.includes(id);
 }
 
+function ownedVisibleTalentCount() {
+  const visibleTalentIds = new Set(TALENT_DEFS.map((talent) => talent.id));
+  return state.ownedTalents.filter((id) => visibleTalentIds.has(id)).length;
+}
+
 function buyTalent(id, sourceButton = null) {
   const talent = TALENT_DEFS.find((item) => item.id === id);
   if (!talent || hasTalent(id)) return;
@@ -119,7 +117,7 @@ function buyTalent(id, sourceButton = null) {
     showShopPurchaseFeedback(`啟用 ${talent.name}`);
     updateCoinUi();
     pulseTalentCoinWallet();
-    talentSummaryEl.textContent = `已擁有 ${state.ownedTalents.length}/${TALENT_DEFS.length}`;
+    talentSummaryEl.textContent = `已擁有 ${ownedVisibleTalentCount()}/${TALENT_DEFS.length}`;
     window.setTimeout(() => {
       renderTalentShop();
     }, 420);
@@ -223,17 +221,13 @@ function applyStartTalents() {
     state.expToNext = expRequiredForLevel(state.playerLevel);
   }
 
-  if (hasTalent('starter_score')) {
-    state.score += 100;
-  }
-
   updateGravity();
   updateHud();
 }
 
 function renderTalentShop() {
   updateCoinUi();
-  talentSummaryEl.textContent = `已擁有 ${state.ownedTalents.length}/${TALENT_DEFS.length}`;
+  talentSummaryEl.textContent = `已擁有 ${ownedVisibleTalentCount()}/${TALENT_DEFS.length}`;
   talentListEl.replaceChildren();
 
   const sortedTalents = [...TALENT_DEFS]

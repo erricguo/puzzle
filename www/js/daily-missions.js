@@ -1,61 +1,355 @@
 const DAILY_MISSION_STORAGE_KEY = 'veggieMergeDailyMissions';
 const DAILY_MISSION_COUNT = 3;
 const DAILY_MISSION_AD_REFRESH_LIMIT = 1;
+const DAILY_MISSION_DIFFICULTIES = ['easy', 'medium', 'hard'];
+
+const DAILY_MISSION_RARITY_LABELS = {
+  common: '普通',
+  uncommon: '優良',
+  rare: '稀有',
+  epic: '史詩',
+  legendary: '傳說'
+};
+
+const DAILY_MISSION_KIND_LABELS = {
+  play: '對局',
+  merge: '合成',
+  score: '分數',
+  combo: 'Combo',
+  level: '層數',
+  blast: '爆裂'
+};
 
 const DAILY_MISSION_DEFS = [
-  {
-    id: 'score_1000',
-    title: '菜園得分手',
-    description: '今日累積獲得 1000 分。',
-    target: 1000,
-    reward: 60,
-    kind: 'score',
-    mode: 'add'
-  },
-  {
-    id: 'merge_30',
-    title: '合成練習',
-    description: '今日合成 30 次蔬菜。',
-    target: 30,
-    reward: 40,
-    kind: 'merge',
-    mode: 'add'
-  },
-  {
-    id: 'combo_8',
-    title: 'Combo 小高手',
-    description: '今日達成最高 Combo 8。',
-    target: 8,
-    reward: 80,
-    kind: 'combo',
-    mode: 'max'
-  },
-  {
-    id: 'blast_10',
-    title: '腐化清道夫',
-    description: '今日用爆裂清掉 10 顆蔬菜。',
-    target: 10,
-    reward: 70,
-    kind: 'blast',
-    mode: 'add'
-  },
-  {
-    id: 'level_7',
-    title: '高層農夫',
-    description: '今日合成到 7 層蔬菜。',
-    target: 7,
-    reward: 80,
-    kind: 'level',
-    mode: 'max'
-  },
   {
     id: 'play_1',
     title: '今天也來一局',
     description: '今日完成 1 局遊戲。',
     target: 1,
-    reward: 20,
+    reward: 30,
     kind: 'play',
-    mode: 'add'
+    mode: 'add',
+    difficulty: 'easy',
+    rarity: 'common'
+  },
+  {
+    id: 'play_2',
+    title: '再開一局',
+    description: '今日完成 2 局遊戲。',
+    target: 2,
+    reward: 40,
+    kind: 'play',
+    mode: 'add',
+    difficulty: 'easy',
+    rarity: 'uncommon'
+  },
+  {
+    id: 'merge_20',
+    title: '合成練習',
+    description: '今日合成 20 次蔬菜。',
+    target: 20,
+    reward: 50,
+    kind: 'merge',
+    mode: 'add',
+    difficulty: 'easy',
+    rarity: 'uncommon'
+  },
+  {
+    id: 'merge_35',
+    title: '順手合成',
+    description: '今日合成 35 次蔬菜。',
+    target: 35,
+    reward: 60,
+    kind: 'merge',
+    mode: 'add',
+    difficulty: 'easy',
+    rarity: 'rare'
+  },
+  {
+    id: 'blast_8',
+    title: '小型清掃員',
+    description: '今日用爆裂清掉 8 顆蔬菜。',
+    target: 8,
+    reward: 55,
+    kind: 'blast',
+    mode: 'add',
+    difficulty: 'easy',
+    rarity: 'uncommon'
+  },
+  {
+    id: 'score_1200',
+    title: '起步得分',
+    description: '單局達到 1200 分。',
+    target: 1200,
+    reward: 60,
+    kind: 'score',
+    mode: 'max',
+    difficulty: 'easy',
+    rarity: 'common'
+  },
+  {
+    id: 'score_1800',
+    title: '穩定發揮',
+    description: '單局達到 1800 分。',
+    target: 1800,
+    reward: 70,
+    kind: 'score',
+    mode: 'max',
+    difficulty: 'easy',
+    rarity: 'rare'
+  },
+  {
+    id: 'combo_6',
+    title: 'Combo 初階',
+    description: '單局達成 Combo 6。',
+    target: 6,
+    reward: 60,
+    kind: 'combo',
+    mode: 'max',
+    difficulty: 'easy',
+    rarity: 'common'
+  },
+  {
+    id: 'combo_10',
+    title: 'Combo 成形',
+    description: '單局達成 Combo 10。',
+    target: 10,
+    reward: 75,
+    kind: 'combo',
+    mode: 'max',
+    difficulty: 'easy',
+    rarity: 'uncommon'
+  },
+  {
+    id: 'level_5',
+    title: '小菜園成長',
+    description: '今日合成到 5 層高級蔬菜。',
+    target: 5,
+    reward: 80,
+    kind: 'level',
+    mode: 'max',
+    difficulty: 'easy',
+    rarity: 'rare'
+  },
+  {
+    id: 'play_3',
+    title: '三局熱身',
+    description: '今日完成 3 局遊戲。',
+    target: 3,
+    reward: 55,
+    kind: 'play',
+    mode: 'add',
+    difficulty: 'medium',
+    rarity: 'common'
+  },
+  {
+    id: 'play_4',
+    title: '再戰一回',
+    description: '今日完成 4 局遊戲。',
+    target: 4,
+    reward: 65,
+    kind: 'play',
+    mode: 'add',
+    difficulty: 'medium',
+    rarity: 'uncommon'
+  },
+  {
+    id: 'merge_50',
+    title: '熟練合成',
+    description: '今日合成 50 次蔬菜。',
+    target: 50,
+    reward: 90,
+    kind: 'merge',
+    mode: 'add',
+    difficulty: 'medium',
+    rarity: 'uncommon'
+  },
+  {
+    id: 'merge_70',
+    title: '連續整地',
+    description: '今日合成 70 次蔬菜。',
+    target: 70,
+    reward: 110,
+    kind: 'merge',
+    mode: 'add',
+    difficulty: 'medium',
+    rarity: 'rare'
+  },
+  {
+    id: 'blast_18',
+    title: '中型清掃',
+    description: '今日用爆裂清掉 18 顆蔬菜。',
+    target: 18,
+    reward: 95,
+    kind: 'blast',
+    mode: 'add',
+    difficulty: 'medium',
+    rarity: 'uncommon'
+  },
+  {
+    id: 'blast_25',
+    title: '爆裂熟手',
+    description: '今日用爆裂清掉 25 顆蔬菜。',
+    target: 25,
+    reward: 110,
+    kind: 'blast',
+    mode: 'add',
+    difficulty: 'medium',
+    rarity: 'rare'
+  },
+  {
+    id: 'score_3000',
+    title: '菜園得分手',
+    description: '單局達到 3000 分。',
+    target: 3000,
+    reward: 130,
+    kind: 'score',
+    mode: 'max',
+    difficulty: 'medium',
+    rarity: 'rare'
+  },
+  {
+    id: 'score_4500',
+    title: '得分節奏',
+    description: '單局達到 4500 分。',
+    target: 4500,
+    reward: 150,
+    kind: 'score',
+    mode: 'max',
+    difficulty: 'medium',
+    rarity: 'epic'
+  },
+  {
+    id: 'combo_20',
+    title: 'Combo 小高手',
+    description: '單局達成 Combo 20。',
+    target: 20,
+    reward: 140,
+    kind: 'combo',
+    mode: 'max',
+    difficulty: 'medium',
+    rarity: 'rare'
+  },
+  {
+    id: 'level_8',
+    title: '進階育成',
+    description: '今日合成到 8 層高級蔬菜。',
+    target: 8,
+    reward: 160,
+    kind: 'level',
+    mode: 'max',
+    difficulty: 'medium',
+    rarity: 'epic'
+  },
+  {
+    id: 'play_5',
+    title: '五局耐力',
+    description: '今日完成 5 局遊戲。',
+    target: 5,
+    reward: 80,
+    kind: 'play',
+    mode: 'add',
+    difficulty: 'hard',
+    rarity: 'uncommon'
+  },
+  {
+    id: 'merge_90',
+    title: '高強度合成',
+    description: '今日合成 90 次蔬菜。',
+    target: 90,
+    reward: 170,
+    kind: 'merge',
+    mode: 'add',
+    difficulty: 'hard',
+    rarity: 'rare'
+  },
+  {
+    id: 'merge_120',
+    title: '爆量整地',
+    description: '今日合成 120 次蔬菜。',
+    target: 120,
+    reward: 210,
+    kind: 'merge',
+    mode: 'add',
+    difficulty: 'hard',
+    rarity: 'epic'
+  },
+  {
+    id: 'blast_40',
+    title: '清場高手',
+    description: '今日用爆裂清掉 40 顆蔬菜。',
+    target: 40,
+    reward: 180,
+    kind: 'blast',
+    mode: 'add',
+    difficulty: 'hard',
+    rarity: 'rare'
+  },
+  {
+    id: 'blast_60',
+    title: '爆裂專家',
+    description: '今日用爆裂清掉 60 顆蔬菜。',
+    target: 60,
+    reward: 230,
+    kind: 'blast',
+    mode: 'add',
+    difficulty: 'hard',
+    rarity: 'epic'
+  },
+  {
+    id: 'score_6000',
+    title: '高分之路',
+    description: '單局達到 6000 分。',
+    target: 6000,
+    reward: 240,
+    kind: 'score',
+    mode: 'max',
+    difficulty: 'hard',
+    rarity: 'epic'
+  },
+  {
+    id: 'score_9000',
+    title: '分數傳說',
+    description: '單局達到 9000 分。',
+    target: 9000,
+    reward: 300,
+    kind: 'score',
+    mode: 'max',
+    difficulty: 'hard',
+    rarity: 'legendary'
+  },
+  {
+    id: 'combo_35',
+    title: 'Combo 名手',
+    description: '單局達成 Combo 35。',
+    target: 35,
+    reward: 220,
+    kind: 'combo',
+    mode: 'max',
+    difficulty: 'hard',
+    rarity: 'epic'
+  },
+  {
+    id: 'combo_50',
+    title: 'Combo 傳說',
+    description: '單局達成 Combo 50。',
+    target: 50,
+    reward: 320,
+    kind: 'combo',
+    mode: 'max',
+    difficulty: 'hard',
+    rarity: 'legendary'
+  },
+  {
+    id: 'level_10',
+    title: '高級蔬菜培育家',
+    description: '今日合成到 10 層高級蔬菜。',
+    target: 10,
+    reward: 280,
+    kind: 'level',
+    mode: 'max',
+    difficulty: 'hard',
+    rarity: 'legendary'
   }
 ];
 
@@ -80,13 +374,28 @@ function seededRandom(seed) {
 
 function pickDailyMissionIds(seedKey, excludedIds = []) {
   const excluded = new Set(excludedIds);
-  const available = DAILY_MISSION_DEFS.filter((mission) => !excluded.has(mission.id));
-  const pool = available.length >= DAILY_MISSION_COUNT ? available : DAILY_MISSION_DEFS;
   const random = seededRandom(dailySeed(seedKey));
-  return [...pool]
+  const missionIds = DAILY_MISSION_DIFFICULTIES
+    .map((difficulty) => {
+      const available = DAILY_MISSION_DEFS.filter((mission) => (
+        mission.difficulty === difficulty &&
+        !excluded.has(mission.id)
+      ));
+      const pool = available.length
+        ? available
+        : DAILY_MISSION_DEFS.filter((mission) => mission.difficulty === difficulty);
+      return [...pool].sort(() => random() - 0.5)[0]?.id;
+    })
+    .filter(Boolean);
+
+  if (missionIds.length >= DAILY_MISSION_COUNT) return missionIds.slice(0, DAILY_MISSION_COUNT);
+
+  return [...DAILY_MISSION_DEFS]
+    .filter((mission) => !missionIds.includes(mission.id))
     .sort(() => random() - 0.5)
-    .slice(0, DAILY_MISSION_COUNT)
-    .map((mission) => mission.id);
+    .slice(0, DAILY_MISSION_COUNT - missionIds.length)
+    .map((mission) => mission.id)
+    .concat(missionIds);
 }
 
 function pickRefreshedDailyMissionIds(dateKey, currentIds) {
@@ -105,13 +414,17 @@ function dailyMissionDef(id) {
 
 function normalizeDailyMissionState(stored = state.dailyMissionState) {
   const dateKey = dailyDateKey();
-  const storedMissions = stored?.date === dateKey && Array.isArray(stored.missions)
+  const hasTodayMissionState = stored?.date === dateKey && Array.isArray(stored.missions);
+  const storedMissions = hasTodayMissionState
     ? stored.missions
     : [];
   const storedById = new Map(storedMissions.map((mission) => [mission.id, mission]));
-  const missionIds = stored?.date === dateKey && storedMissions.length
+  let missionIds = hasTodayMissionState
     ? storedMissions.map((mission) => mission.id)
     : pickDailyMissionIds(dateKey);
+  if (!missionIds.some((id) => dailyMissionDef(id))) {
+    missionIds = pickDailyMissionIds(dateKey);
+  }
 
   state.dailyMissionState = {
     date: dateKey,
@@ -175,12 +488,20 @@ function spendCoins(amount) {
 
 function saveDailyMissionState() {
   localStorage.setItem(DAILY_MISSION_STORAGE_KEY, JSON.stringify(state.dailyMissionState));
+  queuePlayerProgressSync?.();
 }
 
 function setupDailyMissions() {
   normalizeDailyMissionState();
   updateCoinUi();
   renderDailyMissions();
+  dailyMissionListEl?.addEventListener('click', (event) => {
+    const claimButton = event.target.closest?.('.daily-claim-button');
+    if (!claimButton || !dailyMissionListEl.contains(claimButton)) return;
+    event.stopPropagation();
+    claimDailyMissionReward(claimButton.dataset.missionId, claimButton);
+    playClickSound();
+  });
 }
 
 function resetDailyMissionProgress(missionIds) {
@@ -276,6 +597,14 @@ function dailyMissionReward(def) {
   return Math.ceil(def.reward * talentMissionRewardMultiplier());
 }
 
+function dailyMissionRarityLabel(def) {
+  return DAILY_MISSION_RARITY_LABELS[def.rarity] || '普通';
+}
+
+function dailyMissionKindLabel(def) {
+  return DAILY_MISSION_KIND_LABELS[def.kind] || '任務';
+}
+
 function updateDailyRefreshButton() {
   if (!dailyRefreshButton) return;
   normalizeDailyMissionState();
@@ -342,6 +671,23 @@ function renderDailyMissions() {
   dailyResetTextEl.textContent = `每日 00:00 更新 · ${state.dailyMissionState.date}`;
   dailyMissionListEl.replaceChildren();
 
+  if (!state.dailyMissionState.missions.length) {
+    const emptyItem = document.createElement('article');
+    emptyItem.className = 'daily-mission daily-mission-empty';
+    emptyItem.innerHTML = `
+      <div class="daily-mission-copy">
+        <div class="daily-mission-tags">
+          <small class="daily-tag daily-rarity">無任務</small>
+        </div>
+        <strong>今天沒有任務</strong>
+        <span>明天會重新補上新任務，也可以用刷新補一輪。</span>
+        <em><img src="assets/images/coin.png" alt="" /> 先休息一下</em>
+      </div>
+    `;
+    dailyMissionListEl.appendChild(emptyItem);
+    return;
+  }
+
   for (const mission of state.dailyMissionState.missions) {
     const def = dailyMissionDef(mission.id);
     if (!def) continue;
@@ -350,12 +696,16 @@ function renderDailyMissions() {
     const percent = clamp((progress / def.target) * 100, 0, 100);
     const reward = dailyMissionReward(def);
     const item = document.createElement('article');
-    item.className = `daily-mission${mission.completed ? ' completed' : ''}`;
+    item.className = `daily-mission daily-mission-${def.difficulty || 'easy'} daily-rarity-${def.rarity || 'common'} daily-kind-${def.kind || 'mission'}${mission.completed ? ' completed' : ''}`;
     item.innerHTML = `
+      <em class="daily-reward-pill"><img src="assets/images/coin.png" alt="" /> ${reward}</em>
       <div class="daily-mission-copy">
+        <div class="daily-mission-tags">
+          <small class="daily-tag daily-kind">${escapeHtml(dailyMissionKindLabel(def))}</small>
+          <small class="daily-tag daily-rarity">${escapeHtml(dailyMissionRarityLabel(def))}</small>
+        </div>
         <strong>${escapeHtml(def.title)}</strong>
         <span>${escapeHtml(def.description)}</span>
-        <em><img src="assets/images/coin.png" alt="" /> 獎勵 ${reward}</em>
       </div>
       <div class="daily-progress">
         <div class="daily-progress-row">
@@ -370,11 +720,6 @@ function renderDailyMissions() {
         ? `<button class="daily-claim-button" type="button" data-mission-id="${escapeHtml(mission.id)}"><img src="assets/images/coin.png" alt="" /> 領取 ${reward}</button>`
         : ''}
     `;
-    item.querySelector('.daily-claim-button')?.addEventListener('click', (event) => {
-      event.stopPropagation();
-      claimDailyMissionReward(event.currentTarget.dataset.missionId, event.currentTarget);
-      playClickSound();
-    });
     dailyMissionListEl.appendChild(item);
   }
 }

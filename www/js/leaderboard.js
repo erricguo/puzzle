@@ -7,6 +7,7 @@ function saveLocalLeaderboard() {
     .slice(0, LEADERBOARD_LIMIT);
   leaderboardState.localRows = sorted;
   localStorage.setItem('veggieMergeLocalLeaderboard', JSON.stringify(sorted));
+  queuePlayerProgressSync?.();
 }
 
 function normalizeLeaderboardRow(row) {
@@ -14,6 +15,7 @@ function normalizeLeaderboardRow(row) {
     ...row,
     score: Math.max(0, Math.floor(Number(row.score) || 0)),
     best_combo: Math.max(0, Math.floor(Number(row.best_combo) || 0)),
+    best_level: clamp(Math.floor(Number(row.best_level) || 1), 1, VEGETABLES.length),
     board_type: row.board_type === 'item' ? 'item' : 'classic',
     created_at: row.created_at || new Date().toISOString()
   };
@@ -195,12 +197,56 @@ async function submitLeaderboardScore() {
     Object.assign(row, normalizeLeaderboardRow(row));
     leaderboardState.recentScoreRow = row;
     leaderboardState.recentScoreRank = await calculateScoreRank(row);
+    saveLocalLeaderboard();
   }
 
   if (error) {
     leaderboardMessageEl.textContent = `送出失敗，已保存在本機: ${error.message}`;
   }
   return row;
+}
+
+async function syncPendingLocalLeaderboardRows() {
+  const client = leaderboardState.client;
+  if (!client) return false;
+
+  const pendingRows = leaderboardState.localRows
+    .map(normalizeLeaderboardRow)
+    .filter((row) => !row.id && row.score > 0 && row.best_combo > 0);
+  if (!pendingRows.length) return true;
+
+  let changed = false;
+  for (const row of pendingRows) {
+    const { data, error } = await client
+      .from('vegetable_merge_scores')
+      .insert({
+        player_id: leaderboardState.playerId || row.player_id,
+        player_name: row.player_name || leaderboardState.playerName,
+        score: row.score,
+        best_combo: row.best_combo,
+        best_level: row.best_level,
+        board_type: row.board_type
+      })
+      .select('id, player_name, score, best_combo, best_level, board_type, created_at')
+      .single();
+
+    if (error || !data) {
+      console.warn('Pending leaderboard sync failed', error);
+      continue;
+    }
+
+    Object.assign(row, normalizeLeaderboardRow(data));
+    const index = leaderboardState.localRows.findIndex((item) => isRecentScoreRow(item, row));
+    if (index >= 0) {
+      leaderboardState.localRows[index] = row;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    saveLocalLeaderboard();
+  }
+  return true;
 }
 
 async function calculateScoreRank(row) {
@@ -285,22 +331,13 @@ function renderLeaderboard() {
   const rows = leaderboardState.rows[leaderboardState.activeTab];
   const boardType = currentBoardType();
   const boardLabel = boardType === 'item' ? '道具榜' : '經典榜';
-  const currentRunBoardType = state.itemBoardRun ? 'item' : 'classic';
   const recentMatchesBoard = leaderboardState.recentScoreRow
     && normalizeLeaderboardRow(leaderboardState.recentScoreRow).board_type === boardType;
-  const showPersonalInfo = state.hasStarted || state.gameOver || Boolean(leaderboardState.recentScoreRow);
+  let recentItem = null;
 
   leaderboardListEl.replaceChildren();
-  leaderboardPersonalInfoEl.hidden = !showPersonalInfo;
-  if (showPersonalInfo) {
-    leaderboardPersonalInfoEl.innerHTML = `
-      <span>${escapeHtml(leaderboardState.playerName || '訪客玩家')}</span>
-      <b>本局 Combo ${state.bestCombo || 0}</b>
-      <small>${currentRunBoardType === 'item' ? '本局將列入道具榜' : '本局將列入經典榜'}</small>
-    `;
-  } else {
-    leaderboardPersonalInfoEl.replaceChildren();
-  }
+  leaderboardPersonalInfoEl.hidden = true;
+  leaderboardPersonalInfoEl.replaceChildren();
 
   rows.forEach((row, index) => {
     const item = document.createElement('li');
@@ -320,9 +357,14 @@ function renderLeaderboard() {
     `;
     if (isRecent) {
       item.querySelector('.player strong')?.insertAdjacentHTML('beforeend', '<span class="recent-label">本局</span>');
+      recentItem = item;
     }
     leaderboardListEl.appendChild(item);
   });
+
+  if (recentMatchesBoard && recentItem) {
+    focusRecentLeaderboardItem(recentItem);
+  }
 
   if (recentMatchesBoard) {
     leaderboardMessageEl.textContent = leaderboardState.recentScoreRank
@@ -342,6 +384,19 @@ function renderLeaderboard() {
   }
 
   leaderboardMessageEl.textContent = rows.length ? '' : '目前還沒有紀錄，先來打第一筆吧';
+}
+
+function focusRecentLeaderboardItem(item) {
+  window.requestAnimationFrame(() => {
+    item.scrollIntoView({
+      block: 'center',
+      inline: 'nearest',
+      behavior: 'smooth'
+    });
+    item.classList.remove('focus-rank');
+    item.offsetWidth;
+    item.classList.add('focus-rank');
+  });
 }
 
 function openLeaderboard(tab = leaderboardState.activeTab) {

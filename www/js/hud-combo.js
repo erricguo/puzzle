@@ -1,6 +1,10 @@
 function setNextLevel() {
   state.nextLevel = Number.isInteger(state.previewLevel) ? state.previewLevel : randomSpawnLevel();
   state.previewLevel = randomSpawnLevel();
+  updateNextLabelStatus();
+}
+
+function updateNextLabelStatus() {
   const statusText = state.bombTargeting
     ? '點選蔬菜引爆炸彈'
     : state.fertilizerCharges > 0

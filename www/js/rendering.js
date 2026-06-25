@@ -202,6 +202,8 @@ function drawTopUiOverlay(now) {
   dangerLineEl.style.top = `${state.dangerY}px`;
   dangerLabelEl.style.top = `${state.dangerY - 27}px`;
   dangerLabelEl.style.right = '10px';
+  bombButton.style.top = `${Math.max(10, state.dangerY - 62)}px`;
+  bombButton.style.right = '10px';
 
   const dangerTimes = Composite.allBodies(world)
     .filter((body) => body.label === 'vegetable' && body.dangerEnteredAt)
@@ -211,7 +213,7 @@ function drawTopUiOverlay(now) {
     const remaining = Math.max(0, 2 - (now - oldestDangerAt) / 1000);
     dangerCountdownEl.hidden = false;
     dangerCountdownEl.textContent = `${remaining.toFixed(1)} 秒`;
-    dangerCountdownEl.style.top = `${state.dangerY - 27}px`;
+    dangerCountdownEl.style.top = `${state.dangerY}px`;
   } else {
     dangerCountdownEl.hidden = true;
   }

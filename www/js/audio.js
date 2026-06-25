@@ -93,6 +93,7 @@ function updateAudioVolume() {
   localStorage.setItem('veggieMergeSoundEnabled', String(audioState.enabled));
   localStorage.setItem('veggieMergeMusicVolume', String(audioState.musicVolume));
   localStorage.setItem('veggieMergeSfxVolume', String(audioState.sfxVolume));
+  queuePlayerProgressSync?.();
 }
 
 function updateSliderFill(slider) {
@@ -108,6 +109,7 @@ function updateHapticsUi() {
   vibrationToggle.setAttribute('aria-checked', String(hapticsState.enabled));
   vibrationToggle.setAttribute('aria-label', hapticsState.enabled ? '關閉震動效果' : '開啟震動效果');
   localStorage.setItem('veggieMergeHapticsEnabled', String(hapticsState.enabled));
+  queuePlayerProgressSync?.();
 }
 
 function vibrate(pattern) {
