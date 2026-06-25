@@ -94,7 +94,7 @@ function hasTalent(id) {
   return state.ownedTalents.includes(id);
 }
 
-function buyTalent(id) {
+function buyTalent(id, sourceButton = null) {
   const talent = TALENT_DEFS.find((item) => item.id === id);
   if (!talent || hasTalent(id)) return;
   if (!spendCoins(talent.cost)) {
@@ -104,11 +104,45 @@ function buyTalent(id) {
 
   state.ownedTalents = [...state.ownedTalents, id];
   saveOwnedTalents();
+  const card = sourceButton?.closest?.('.talent-card');
+  if (card) {
+    sourceButton.disabled = true;
+    card.classList.add('purchased');
+    showShopPurchaseFeedback(`啟用 ${talent.name}`);
+    updateCoinUi();
+    pulseTalentCoinWallet();
+    talentSummaryEl.textContent = `已擁有 ${state.ownedTalents.length}/${TALENT_DEFS.length}`;
+    window.setTimeout(() => {
+      renderTalentShop();
+    }, 420);
+  } else {
+    renderTalentShop();
+    pulseTalentCoinWallet();
+  }
   playClickSound();
-  renderTalentShop();
 }
 
-function buyShopItem(id) {
+function pulseTalentCoinWallet() {
+  if (!talentCoinWalletEl) return;
+  talentCoinWalletEl.classList.remove('coin-wallet-pop');
+  talentCoinWalletEl.offsetWidth;
+  talentCoinWalletEl.classList.add('coin-wallet-pop');
+}
+
+function showShopPurchaseFeedback(message) {
+  const panel = talentScene?.querySelector?.('.talent-panel');
+  if (!panel) return;
+  panel.querySelector('.shop-purchase-feedback')?.remove();
+  const feedback = document.createElement('div');
+  feedback.className = 'shop-purchase-feedback';
+  feedback.textContent = message;
+  panel.appendChild(feedback);
+  window.setTimeout(() => {
+    feedback.remove();
+  }, 520);
+}
+
+function buyShopItem(id, sourceButton = null) {
   const item = ITEM_SHOP_DEFS.find((entry) => entry.id === id);
   if (!item) return;
   if (!spendCoins(item.cost)) {
@@ -120,8 +154,23 @@ function buyShopItem(id) {
     addReviveTickets(item.quantity);
   }
 
+  const card = sourceButton?.closest?.('.talent-card');
+  if (card) {
+    sourceButton.disabled = true;
+    card.classList.add('purchased');
+    showShopPurchaseFeedback(`獲得 ${item.name} x${item.quantity || 1}`);
+    updateCoinUi();
+    pulseTalentCoinWallet();
+    talentSummaryEl.textContent = `復活券 ${state.reviveTickets} 張`;
+    window.setTimeout(() => {
+      renderItemShop();
+    }, 420);
+  } else {
+    renderItemShop();
+    pulseTalentCoinWallet();
+  }
+
   playClickSound();
-  renderItemShop();
 }
 
 function talentComboDurationBonus() {
@@ -198,7 +247,7 @@ function renderTalentShop() {
     `;
     item.querySelector('.talent-buy-button')?.addEventListener('click', (event) => {
       event.stopPropagation();
-      buyTalent(event.currentTarget.dataset.talentId);
+      buyTalent(event.currentTarget.dataset.talentId, event.currentTarget);
     });
     talentListEl.appendChild(item);
   }
@@ -228,7 +277,7 @@ function renderItemShop() {
     `;
     card.querySelector('.talent-buy-button')?.addEventListener('click', (event) => {
       event.stopPropagation();
-      buyShopItem(event.currentTarget.dataset.itemId);
+      buyShopItem(event.currentTarget.dataset.itemId, event.currentTarget);
     });
     itemListEl.appendChild(card);
   }

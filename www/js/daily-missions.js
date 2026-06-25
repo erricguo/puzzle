@@ -198,17 +198,55 @@ function resetDailyMissionProgress(missionIds) {
     .filter(Boolean);
 }
 
-function claimDailyMissionReward(missionId) {
+function pulseDailyCoinWallet() {
+  if (!dailyCoinWalletEl) return;
+  dailyCoinWalletEl.classList.remove('coin-wallet-pop');
+  dailyCoinWalletEl.offsetWidth;
+  dailyCoinWalletEl.classList.add('coin-wallet-pop');
+}
+
+function showDailyRewardFeedback(message) {
+  const panel = dailyScene?.querySelector?.('.daily-panel');
+  if (!panel) return;
+  panel.querySelector('.daily-reward-feedback')?.remove();
+  const feedback = document.createElement('div');
+  feedback.className = 'daily-reward-feedback';
+  feedback.textContent = message;
+  panel.appendChild(feedback);
+  window.setTimeout(() => {
+    feedback.remove();
+  }, 520);
+}
+
+function claimDailyMissionReward(missionId, sourceButton = null) {
   normalizeDailyMissionState();
   const mission = state.dailyMissionState.missions.find((item) => item.id === missionId);
   const def = dailyMissionDef(missionId);
   if (!mission || !def || !mission.completed || mission.rewardClaimed) return;
 
   mission.rewardClaimed = true;
-  addCoins(dailyMissionReward(def));
+  const reward = dailyMissionReward(def);
+  addCoins(reward);
   state.dailyMissionState.missions = state.dailyMissionState.missions.filter((item) => item.id !== missionId);
   saveDailyMissionState();
-  renderDailyMissions();
+
+  const missionEl = sourceButton?.closest?.('.daily-mission');
+  if (!missionEl) {
+    renderDailyMissions();
+    pulseDailyCoinWallet();
+    return;
+  }
+
+  sourceButton.disabled = true;
+  sourceButton.textContent = '已領取';
+  missionEl.classList.add('claiming');
+  showDailyRewardFeedback(`獲得 ${reward} 金幣`);
+  updateCoinUi();
+  pulseDailyCoinWallet();
+
+  window.setTimeout(() => {
+    renderDailyMissions();
+  }, 420);
 }
 
 function recordDailyMissionProgress(kind, amount = 1) {
@@ -334,7 +372,7 @@ function renderDailyMissions() {
     `;
     item.querySelector('.daily-claim-button')?.addEventListener('click', (event) => {
       event.stopPropagation();
-      claimDailyMissionReward(event.currentTarget.dataset.missionId);
+      claimDailyMissionReward(event.currentTarget.dataset.missionId, event.currentTarget);
       playClickSound();
     });
     dailyMissionListEl.appendChild(item);
