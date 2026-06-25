@@ -25,7 +25,14 @@ render.canvas.addEventListener('pointerdown', startAim);
 render.canvas.addEventListener('pointermove', moveAim);
 render.canvas.addEventListener('pointerup', endAim);
 render.canvas.addEventListener('pointercancel', endAim);
-render.canvas.addEventListener('contextmenu', showDebugPanel);
+render.canvas.addEventListener('contextmenu', (event) => {
+  if (DEBUG_ENABLED) {
+    showDebugPanel(event);
+    return;
+  }
+  event.preventDefault();
+  debugPanel.hidden = true;
+});
 skillPanel.addEventListener('pointerdown', stopSkillPanelBackdropEvent);
 skillPanel.addEventListener('pointerup', stopSkillPanelBackdropEvent);
 skillPanel.addEventListener('click', stopSkillPanelBackdropEvent);
@@ -75,6 +82,10 @@ debugCoinButton.addEventListener('click', () => {
 });
 startButton.addEventListener('click', startGame);
 startScene.addEventListener('click', startGame);
+bombButton.addEventListener('click', (event) => {
+  event.stopPropagation();
+  activateBombTargeting();
+});
 startDailyButton.addEventListener('click', (event) => {
   event.stopPropagation();
   openDailyMissions();

@@ -64,6 +64,11 @@ function loadReviveTickets() {
   return Number.isFinite(tickets) && tickets > 0 ? Math.floor(tickets) : 0;
 }
 
+function loadBombs() {
+  const bombs = Number(localStorage.getItem('veggieMergeBombs') || 0);
+  return Number.isFinite(bombs) && bombs > 0 ? Math.floor(bombs) : 0;
+}
+
 function loadOwnedTalents() {
   try {
     const stored = JSON.parse(localStorage.getItem('veggieMergeOwnedTalents') || '[]');

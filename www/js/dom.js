@@ -13,6 +13,7 @@ const bestLevelEl = document.getElementById('bestLevel');
 const playerLevelEl = document.getElementById('playerLevel');
 const expFillEl = document.getElementById('expFill');
 const nextLabelEl = document.getElementById('nextLabel');
+const bombButton = document.getElementById('bombButton');
 const pauseButton = document.getElementById('pauseButton');
 const soundButton = document.getElementById('soundButton');
 const musicVolumeSlider = document.getElementById('musicVolumeSlider');

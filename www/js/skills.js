@@ -233,6 +233,10 @@ function maybeShowSkillPanel() {
 
 function showDebugPanel(event) {
   event?.preventDefault();
+  if (!DEBUG_ENABLED) {
+    debugPanel.hidden = true;
+    return;
+  }
   if (!state.hasStarted || state.gameOver) return;
 
   updateDebugMergeButton();

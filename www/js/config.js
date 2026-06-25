@@ -51,6 +51,9 @@ const COMBO_COLORS = ['#68d84d', '#ffd447', '#ff8c32', '#ff5bbd', '#8d70ff', '#3
 const BACKGROUND_MUSIC_SRC = 'assets/sound/Juice%20Merge%20Parade.mp3';
 const REVIVE_BLAST_COUNT = 30;
 const STARTING_REVIVE_TICKETS = 1;
+const ITEM_BOMB_RADIUS = 120;
+const BOMB_USES_PER_RUN = 3;
+const DEBUG_ENABLED = false;
 
 const CORRUPTION_UNLOCK_LEVEL = 50;
 const CORRUPTION_SECONDS_PER_LEVEL = 10;

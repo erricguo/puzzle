@@ -2,9 +2,14 @@ function setPaused(paused) {
   if (!state.hasStarted || state.gameOver || state.isChoosingSkill) return;
   state.paused = paused;
   state.aiming = false;
+  if (paused) {
+    state.bombTargeting = false;
+  }
   engine.timing.timeScale = paused ? 0 : 1;
   pausePanel.hidden = !paused;
   pauseButton.textContent = paused ? '繼續' : '暫停';
+  setNextLevel();
+  updateHud();
   if (paused) {
     playClickSound();
   } else {
@@ -178,8 +183,20 @@ function pointerX(event) {
   return event.clientX - rect.left;
 }
 
+function pointerPoint(event) {
+  const rect = render.canvas.getBoundingClientRect();
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+  };
+}
+
 function startAim(event) {
   if (event.button !== 0) return;
+  if (state.bombTargeting) {
+    useBombAtPoint(pointerPoint(event));
+    return;
+  }
   if (!state.hasStarted || state.paused || state.gameOver) return;
   state.aiming = true;
   state.pointerId = event.pointerId;
@@ -267,6 +284,8 @@ function resetGame() {
   state.previewLevel = null;
   state.gameOver = false;
   state.aiming = false;
+  state.bombTargeting = false;
+  state.bombsUsedThisRun = 0;
   state.paused = false;
   engine.timing.timeScale = 1;
   state.suppressDropUntil = 0;
@@ -361,6 +380,10 @@ function saveReviveTickets() {
   localStorage.setItem('veggieMergeReviveTickets', String(state.reviveTickets));
 }
 
+function saveBombs() {
+  localStorage.setItem('veggieMergeBombs', String(state.bombs));
+}
+
 function addReviveTickets(amount = 1) {
   const value = Number(amount);
   if (!Number.isFinite(value) || value <= 0) return;
@@ -369,12 +392,122 @@ function addReviveTickets(amount = 1) {
   updateReviveButton();
 }
 
+function addBombs(amount = 1) {
+  const value = Number(amount);
+  if (!Number.isFinite(value) || value <= 0) return;
+  state.bombs += Math.floor(value);
+  saveBombs();
+  updateHud();
+}
+
 function updateReviveButton() {
   const canRevive = state.reviveTickets > 0 && !state.reviveUsedThisRun;
   reviveButton.disabled = !canRevive;
   reviveButton.textContent = canRevive
     ? `使用復活券 x${state.reviveTickets}`
     : '沒有可用復活券';
+}
+
+function activateBombTargeting() {
+  if (
+    !state.hasStarted ||
+    state.gameOver ||
+    state.paused ||
+    state.bombs <= 0 ||
+    state.bombsUsedThisRun >= BOMB_USES_PER_RUN
+  ) return;
+  state.bombTargeting = !state.bombTargeting;
+  state.aiming = false;
+  state.pointerId = null;
+  setNextLevel();
+  updateHud();
+  playClickSound();
+}
+
+function findVegetableAtPoint(point) {
+  const bodies = Composite.allBodies(world)
+    .filter((body) => body.label === 'vegetable' && !body.isMerging && !body.isBlasting);
+  return bodies
+    .map((body) => ({
+      body,
+      distance: Math.hypot(body.position.x - point.x, body.position.y - point.y),
+      radius: VEGETABLES[body.vegLevel]?.radius || 0
+    }))
+    .filter((entry) => entry.distance <= entry.radius + 8)
+    .sort((a, b) => a.distance - b.distance || b.body.position.y - a.body.position.y)[0]?.body || null;
+}
+
+function useBombAtPoint(point) {
+  if (
+    !state.bombTargeting ||
+    state.bombs <= 0 ||
+    state.bombsUsedThisRun >= BOMB_USES_PER_RUN ||
+    state.gameOver ||
+    state.paused
+  ) return;
+  const target = findVegetableAtPoint(point);
+  if (!target) {
+    setNextLevel();
+    updateHud();
+    return;
+  }
+
+  state.bombs = Math.max(0, state.bombs - 1);
+  state.bombsUsedThisRun += 1;
+  saveBombs();
+  state.bombTargeting = false;
+  state.itemBoardRun = true;
+  blastVegetablesAround(target, ITEM_BOMB_RADIUS);
+  setNextLevel();
+  updateHud();
+  playClickSound();
+}
+
+function blastVegetablesAround(target, radius = ITEM_BOMB_RADIUS) {
+  const now = performance.now();
+  const center = {
+    x: target.position.x,
+    y: target.position.y,
+    radius
+  };
+  const bodies = Composite.allBodies(world)
+    .filter((body) => (
+      body.label === 'vegetable' &&
+      !body.isMerging &&
+      !body.isBlasting &&
+      Math.hypot(body.position.x - center.x, body.position.y - center.y) <= center.radius
+    ));
+  if (!bodies.length) return false;
+
+  bodies.forEach((body) => {
+    body.isBlasting = true;
+    body.blastStartedAt = now;
+    body.blastOrigin = center;
+    Body.setVelocity(body, {
+      x: (body.position.x - center.x) * 0.035,
+      y: -3.8 + Math.random() * -1.4
+    });
+    Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.45);
+  });
+
+  blastEffects.push({
+    x: center.x,
+    y: center.y,
+    startedAt: now,
+    radius: center.radius
+  });
+
+  window.setTimeout(() => {
+    const remaining = bodies.filter((body) => Composite.allBodies(world).includes(body));
+    Composite.remove(world, remaining);
+  }, BLAST_ANIMATION_DURATION);
+
+  const scoreGain = scoreWithGoldenBonus(bodies.length);
+  state.score += scoreGain;
+  recordDailyMissionProgress('blast', bodies.length);
+  recordDailyMissionProgress('score', scoreGain);
+  updateHud();
+  return true;
 }
 
 function useReviveTicket() {
@@ -390,6 +523,7 @@ function useReviveTicket() {
   state.paused = false;
   state.aiming = false;
   state.pointerId = null;
+  state.bombTargeting = false;
   state.suppressDropUntil = performance.now() + 650;
   Composite.allBodies(world)
     .filter((body) => body.label === 'vegetable')
@@ -454,6 +588,7 @@ function returnToStartScene() {
   state.paused = false;
   state.aiming = false;
   state.pointerId = null;
+  state.bombTargeting = false;
   state.score = 0;
   state.scoreRemainder = 0;
   state.bestLevel = 1;
@@ -469,6 +604,7 @@ function returnToStartScene() {
   state.nextEnvironmentEventRollAt = 0;
   state.itemBoardRun = false;
   state.reviveUsedThisRun = false;
+  state.bombsUsedThisRun = 0;
   leaderboardState.recentScoreRow = null;
   leaderboardState.recentScoreRank = null;
   comboBursts.length = 0;

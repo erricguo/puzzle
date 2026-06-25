@@ -307,7 +307,7 @@ button {
   width: min(calc(100vw - 24px), 452px);
   transform: translateX(-50%);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 8px;
   align-items: center;
   padding: 8px;
@@ -404,6 +404,23 @@ button {
 .hud button:active {
   transform: translateY(2px);
   box-shadow: 0 1px 0 #2d6f24, 0 4px 9px rgba(48, 78, 35, 0.13);
+}
+
+.hud .bomb-button {
+  min-width: 64px;
+  background: linear-gradient(180deg, #ffbf45 0%, #f2792d 100%);
+  box-shadow: 0 3px 0 #b84b20, 0 7px 12px rgba(126, 73, 28, 0.16);
+  white-space: nowrap;
+}
+
+.hud .bomb-button.active {
+  background: linear-gradient(180deg, #ff5a45 0%, #d92828 100%);
+  box-shadow: 0 3px 0 #941d20, 0 0 0 4px rgba(255, 90, 69, 0.18), 0 7px 12px rgba(126, 28, 28, 0.18);
+}
+
+.hud .bomb-button:disabled {
+  opacity: 0.62;
+  transform: none;
 }
 
 .audio-controls {

@@ -1,10 +1,13 @@
 function setNextLevel() {
   state.nextLevel = Number.isInteger(state.previewLevel) ? state.previewLevel : randomSpawnLevel();
   state.previewLevel = randomSpawnLevel();
-  nextLabelEl.hidden = state.fertilizerCharges <= 0;
-  nextLabelEl.textContent = state.fertilizerCharges > 0
-    ? `肥料剩餘: ${state.fertilizerCharges}`
-    : '';
+  const statusText = state.bombTargeting
+    ? '點選蔬菜引爆炸彈'
+    : state.fertilizerCharges > 0
+      ? `肥料剩餘: ${state.fertilizerCharges}`
+      : '';
+  nextLabelEl.hidden = !statusText;
+  nextLabelEl.textContent = statusText;
 }
 
 function updateHud() {
@@ -14,6 +17,11 @@ function updateHud() {
   expFillEl.style.width = `${clamp((state.exp / state.expToNext) * 100, 0, 100)}%`;
   finalScoreEl.textContent = `分數 ${state.score}`;
   finalComboEl.textContent = `最高 Combo ${state.bestCombo}`;
+  const bombUsesRemaining = Math.max(0, BOMB_USES_PER_RUN - state.bombsUsedThisRun);
+  bombButton.hidden = state.bombs <= 0;
+  bombButton.disabled = state.bombs <= 0 || bombUsesRemaining <= 0 || !state.hasStarted || state.gameOver || state.paused;
+  bombButton.classList.toggle('active', state.bombTargeting);
+  bombButton.textContent = state.bombTargeting ? '選蔬菜' : `炸彈 ${bombUsesRemaining}/3`;
 }
 
 function comboDurationFor(combo) {

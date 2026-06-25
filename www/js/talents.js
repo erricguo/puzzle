@@ -76,6 +76,14 @@ const TALENT_DEFS = [
 
 const ITEM_SHOP_DEFS = [
   {
+    id: 'bomb',
+    name: '炸彈',
+    cost: 50,
+    quantity: 1,
+    summary: '遊戲中使用，選擇一顆蔬菜引爆，炸裂自己和周圍蔬菜。',
+    effect: '指定範圍爆破'
+  },
+  {
     id: 'revive_ticket',
     name: '復活券',
     cost: 500,
@@ -153,6 +161,9 @@ function buyShopItem(id, sourceButton = null) {
   if (item.id === 'revive_ticket') {
     addReviveTickets(item.quantity);
   }
+  if (item.id === 'bomb') {
+    addBombs(item.quantity);
+  }
 
   const card = sourceButton?.closest?.('.talent-card');
   if (card) {
@@ -161,7 +172,7 @@ function buyShopItem(id, sourceButton = null) {
     showShopPurchaseFeedback(`獲得 ${item.name} x${item.quantity || 1}`);
     updateCoinUi();
     pulseTalentCoinWallet();
-    talentSummaryEl.textContent = `復活券 ${state.reviveTickets} 張`;
+    talentSummaryEl.textContent = itemShopSummary();
     window.setTimeout(() => {
       renderItemShop();
     }, 420);
@@ -255,7 +266,7 @@ function renderTalentShop() {
 
 function renderItemShop() {
   updateCoinUi();
-  talentSummaryEl.textContent = `復活券 ${state.reviveTickets} 張`;
+  talentSummaryEl.textContent = itemShopSummary();
   itemListEl.replaceChildren();
 
   const sortedItems = [...ITEM_SHOP_DEFS]
@@ -281,6 +292,10 @@ function renderItemShop() {
     });
     itemListEl.appendChild(card);
   }
+}
+
+function itemShopSummary() {
+  return `復活券 ${state.reviveTickets} 張 · 炸彈 ${state.bombs} 顆`;
 }
 
 function setShopTab(tab = activeShopTab) {
