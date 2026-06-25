@@ -2,10 +2,22 @@ const LEADERBOARD_LIMIT = 1000;
 
 function saveLocalLeaderboard() {
   const sorted = [...leaderboardState.localRows]
+    .map(normalizeLeaderboardRow)
     .sort((a, b) => b.score - a.score || b.best_combo - a.best_combo || a.created_at.localeCompare(b.created_at))
     .slice(0, LEADERBOARD_LIMIT);
   leaderboardState.localRows = sorted;
   localStorage.setItem('veggieMergeLocalLeaderboard', JSON.stringify(sorted));
+}
+
+function normalizeLeaderboardRow(row) {
+  return {
+    ...row,
+    board_type: row.board_type === 'item' ? 'item' : 'classic'
+  };
+}
+
+function currentBoardType() {
+  return leaderboardState.activeTab === 'item' ? 'item' : 'classic';
 }
 
 function setupSupabase() {
@@ -141,7 +153,7 @@ async function signInWithGoogle() {
 
 async function submitLeaderboardScore() {
   if (state.scoreSaved) return leaderboardState.recentScoreRow;
-  if (state.score <= 0) return null;
+  if (state.score <= 0 || state.bestCombo <= 0) return null;
   state.scoreSaved = true;
 
   const row = {
@@ -151,6 +163,7 @@ async function submitLeaderboardScore() {
     score: state.score,
     best_combo: state.bestCombo,
     best_level: state.bestLevel,
+    board_type: state.itemBoardRun ? 'item' : 'classic',
     created_at: new Date().toISOString()
   };
 
@@ -158,7 +171,6 @@ async function submitLeaderboardScore() {
   saveLocalLeaderboard();
   leaderboardState.recentScoreRow = row;
   leaderboardState.recentScoreRank = await calculateScoreRank(row);
-  leaderboardState.recentComboRank = await calculateComboRank(row);
 
   if (!leaderboardState.client) return row;
 
@@ -169,16 +181,17 @@ async function submitLeaderboardScore() {
       player_name: row.player_name,
       score: row.score,
       best_combo: row.best_combo,
-      best_level: row.best_level
+      best_level: row.best_level,
+      board_type: row.board_type
     })
-    .select('id, player_name, score, best_combo, best_level, created_at')
+    .select('id, player_name, score, best_combo, best_level, board_type, created_at')
     .single();
 
   if (!error && data) {
     Object.assign(row, data);
+    Object.assign(row, normalizeLeaderboardRow(row));
     leaderboardState.recentScoreRow = row;
     leaderboardState.recentScoreRank = await calculateScoreRank(row);
-    leaderboardState.recentComboRank = await calculateComboRank(row);
   }
 
   if (error) {
@@ -188,10 +201,13 @@ async function submitLeaderboardScore() {
 }
 
 async function calculateScoreRank(row) {
-  if (!row || row.score <= 0) return null;
+  if (!row || row.score <= 0 || row.best_combo <= 0) return null;
+  const boardType = normalizeLeaderboardRow(row).board_type;
 
   if (!leaderboardState.client) {
     const sorted = [...leaderboardState.localRows]
+      .map(normalizeLeaderboardRow)
+      .filter((item) => item.best_combo > 0 && item.board_type === boardType)
       .sort((a, b) => b.score - a.score || b.best_combo - a.best_combo || a.created_at.localeCompare(b.created_at));
     const index = sorted.findIndex((item) => isRecentScoreRow(item, row));
     return index >= 0 ? index + 1 : null;
@@ -200,33 +216,12 @@ async function calculateScoreRank(row) {
   const { count, error } = await leaderboardState.client
     .from('vegetable_merge_scores')
     .select('id', { count: 'exact', head: true })
+    .eq('board_type', boardType)
+    .gt('best_combo', 0)
     .gt('score', row.score);
 
   if (error) {
     console.warn('Leaderboard rank calculation failed', error);
-    return null;
-  }
-
-  return (count || 0) + 1;
-}
-
-async function calculateComboRank(row) {
-  if (!row || row.best_combo <= 0) return null;
-
-  if (!leaderboardState.client) {
-    const sorted = [...leaderboardState.localRows]
-      .sort((a, b) => b.best_combo - a.best_combo || b.score - a.score || a.created_at.localeCompare(b.created_at));
-    const index = sorted.findIndex((item) => isRecentScoreRow(item, row));
-    return index >= 0 ? index + 1 : null;
-  }
-
-  const { count, error } = await leaderboardState.client
-    .from('vegetable_merge_scores')
-    .select('id', { count: 'exact', head: true })
-    .gt('best_combo', row.best_combo);
-
-  if (error) {
-    console.warn('Leaderboard combo rank calculation failed', error);
     return null;
   }
 
@@ -240,28 +235,36 @@ function isRecentScoreRow(row, recent = leaderboardState.recentScoreRow) {
   return row.player_id === recent.player_id
     && row.score === recent.score
     && row.best_combo === recent.best_combo
+    && normalizeLeaderboardRow(row).board_type === normalizeLeaderboardRow(recent).board_type
     && row.best_level === recent.best_level
     && row.created_at === recent.created_at;
 }
 
 async function loadLeaderboard() {
-  const sortColumn = leaderboardState.activeTab === 'score' ? 'score' : 'best_combo';
+  const boardType = currentBoardType();
   leaderboardMessageEl.textContent = '載入中...';
 
   if (!leaderboardState.client) {
     const rows = [...leaderboardState.localRows]
-      .sort((a, b) => b[sortColumn] - a[sortColumn] || b.score - a.score)
+      .map(normalizeLeaderboardRow)
+      .filter((row) => row.best_combo > 0 && row.board_type === boardType)
+      .sort((a, b) => b.score - a.score || b.best_combo - a.best_combo || a.created_at.localeCompare(b.created_at))
       .slice(0, LEADERBOARD_LIMIT);
     leaderboardState.rows[leaderboardState.activeTab] = rows;
     renderLeaderboard();
     return;
   }
 
-  const { data, error } = await leaderboardState.client
+  let query = leaderboardState.client
     .from('vegetable_merge_scores')
-    .select('id, player_name, score, best_combo, best_level, created_at')
-    .order(sortColumn, { ascending: false })
+    .select('id, player_name, score, best_combo, best_level, board_type, created_at')
+    .eq('board_type', boardType)
+    .gt('best_combo', 0);
+
+  const { data, error } = await query
     .order('score', { ascending: false })
+    .order('best_combo', { ascending: false })
+    .order('created_at', { ascending: true })
     .limit(LEADERBOARD_LIMIT);
 
   if (error) {
@@ -271,62 +274,37 @@ async function loadLeaderboard() {
     return;
   }
 
-  leaderboardState.rows[leaderboardState.activeTab] = data || [];
+  leaderboardState.rows[leaderboardState.activeTab] = (data || []).map(normalizeLeaderboardRow);
   renderLeaderboard();
-}
-
-function renderLeaderboardLegacy() {
-  const rows = leaderboardState.rows[leaderboardState.activeTab];
-  const metricKey = leaderboardState.activeTab === 'score' ? 'score' : 'best_combo';
-  const metricLabel = leaderboardState.activeTab === 'score' ? '分' : 'COMBO';
-
-  leaderboardListEl.replaceChildren();
-
-  rows.forEach((row, index) => {
-    const item = document.createElement('li');
-    const isRecent = isRecentScoreRow(row);
-    item.className = `leaderboard-item${isRecent ? ' recent' : ''}`;
-    const detailText = leaderboardState.activeTab === 'combo'
-      ? `最高 Combo ${row.best_combo || 0} · ${formatDate(row.created_at)}`
-      : `最高層 ${row.best_level || 1} · ${formatDate(row.created_at)}`;
-    item.innerHTML = `
-      <span class="rank">${index + 1}</span>
-      <span class="player">
-        <strong>${escapeHtml(row.player_name || '匿名玩家')}</strong>
-        <small>${escapeHtml(detailText)}</small>
-      </span>
-      <span class="metric">${row[metricKey] || 0}<small>${metricLabel}</small></span>
-    `;
-    if (isRecent) {
-      item.querySelector('.player strong')?.insertAdjacentHTML('beforeend', '<span class="recent-label">本局</span>');
-    }
-    leaderboardListEl.appendChild(item);
-  });
-
-  leaderboardMessageEl.textContent = rows.length ? '' : '目前還沒有紀錄，先來打第一筆吧';
 }
 
 function renderLeaderboard() {
   const rows = leaderboardState.rows[leaderboardState.activeTab];
-  const metricKey = leaderboardState.activeTab === 'score' ? 'score' : 'best_combo';
-  const metricLabel = leaderboardState.activeTab === 'score' ? '分' : 'COMBO';
+  const boardType = currentBoardType();
+  const boardLabel = boardType === 'item' ? '道具榜' : '經典榜';
+  const currentRunBoardType = state.itemBoardRun ? 'item' : 'classic';
+  const recentMatchesBoard = leaderboardState.recentScoreRow
+    && normalizeLeaderboardRow(leaderboardState.recentScoreRow).board_type === boardType;
 
   leaderboardListEl.replaceChildren();
+  leaderboardPersonalInfoEl.innerHTML = `
+    <span>${escapeHtml(leaderboardState.playerName || '訪客玩家')}</span>
+    <b>本局 Combo ${state.bestCombo || 0}</b>
+    <small>${currentRunBoardType === 'item' ? '本局將列入道具榜' : '本局將列入經典榜'}</small>
+  `;
 
   rows.forEach((row, index) => {
     const item = document.createElement('li');
     const isRecent = isRecentScoreRow(row);
     item.className = `leaderboard-item${isRecent ? ' recent' : ''}`;
-    const detailText = leaderboardState.activeTab === 'combo'
-      ? `最高 Combo ${row.best_combo || 0} · ${formatDate(row.created_at)}`
-      : `最高蔬菜 ${row.best_level || 1} · ${formatDate(row.created_at)}`;
+    const detailText = `${formatDate(row.created_at)}`;
     item.innerHTML = `
       <span class="rank">${index + 1}</span>
       <span class="player">
         <strong>${escapeHtml(row.player_name || '訪客玩家')}</strong>
         <small>${escapeHtml(detailText)}</small>
       </span>
-      <span class="metric">${row[metricKey] || 0}<small>${metricLabel}</small></span>
+      <span class="metric">${row.score || 0}<small>分</small></span>
     `;
     if (isRecent) {
       item.querySelector('.player strong')?.insertAdjacentHTML('beforeend', '<span class="recent-label">本局</span>');
@@ -334,22 +312,20 @@ function renderLeaderboard() {
     leaderboardListEl.appendChild(item);
   });
 
-  if (leaderboardState.recentScoreRow && leaderboardState.activeTab === 'score') {
+  if (recentMatchesBoard) {
     leaderboardMessageEl.textContent = leaderboardState.recentScoreRank
-      ? `本局成績第 ${leaderboardState.recentScoreRank} 名`
+      ? `本局成績列入${boardLabel}第 ${leaderboardState.recentScoreRank} 名`
       : '本局成績已送出';
     return;
   }
 
-  if (leaderboardState.recentScoreRow && leaderboardState.activeTab === 'combo') {
-    leaderboardMessageEl.textContent = leaderboardState.recentComboRank
-      ? `本局 COMBO 第 ${leaderboardState.recentComboRank} 名`
-      : '本局 COMBO 已送出';
+  if (state.gameOver && state.score <= 0) {
+    leaderboardMessageEl.textContent = '本局沒有分數，未列入排行榜';
     return;
   }
 
-  if (state.gameOver && state.score <= 0 && leaderboardState.activeTab === 'score') {
-    leaderboardMessageEl.textContent = '本局沒有分數，未列入排行榜';
+  if (state.gameOver && state.bestCombo <= 0) {
+    leaderboardMessageEl.textContent = '本局 COMBO 為 0，未列入排行榜';
     return;
   }
 
@@ -360,9 +336,9 @@ function openLeaderboard(tab = leaderboardState.activeTab) {
   if (state.hasStarted && !state.gameOver) {
     setPaused(true);
   }
-  leaderboardState.activeTab = tab;
-  scoreTabButton.classList.toggle('active', tab === 'score');
-  comboTabButton.classList.toggle('active', tab === 'combo');
+  leaderboardState.activeTab = tab === 'item' ? 'item' : 'classic';
+  scoreTabButton.classList.toggle('active', leaderboardState.activeTab === 'classic');
+  comboTabButton.classList.toggle('active', leaderboardState.activeTab === 'item');
   leaderboardScene.hidden = false;
   loadLeaderboard();
 }

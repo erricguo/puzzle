@@ -127,6 +127,36 @@ function drawPreviewVegetableSprite(ctx, level, x, y, radius, alpha = 1) {
   ctx.restore();
 }
 
+function drawQueuedPreview(ctx, level, x, y, now) {
+  if (!Number.isInteger(level) || level < 0 || level >= VEGETABLES.length) return;
+
+  const radius = clamp(VEGETABLES[level].radius * 0.58, 15, 28);
+  const alpha = 0.64 + Math.sin(now * 0.004 + 1.2) * 0.06;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+  ctx.strokeStyle = 'rgba(75, 143, 61, 0.24)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x, y, radius + 9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+
+  drawPreviewVegetableSprite(ctx, level, x, y, radius, alpha + 0.12);
+
+  ctx.save();
+  ctx.font = '900 10px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.88)';
+  ctx.fillStyle = '#315d29';
+  ctx.strokeText('再下一顆', x, y + radius + 14);
+  ctx.fillText('再下一顆', x, y + radius + 14);
+  ctx.restore();
+}
+
 function isPreviewBlockedByVegetable(x, y, radius) {
   return Composite.allBodies(world).some((body) => {
     if (body.label !== 'vegetable' || body.isBlasting) return false;
@@ -648,7 +678,17 @@ function drawGameOverlay() {
     }
   }
 
-  if (state.aiming) {
+  if (talentHasStablePreview() && state.fertilizerCharges <= 0) {
+    const queuedPreviewRadius = clamp(VEGETABLES[state.previewLevel]?.radius * 0.58 || 18, 15, 28);
+    const side = x < state.width / 2 ? 1 : -1;
+    const queuedX = clamp(x + side * (previewRadius + queuedPreviewRadius + 22), queuedPreviewRadius + 12, state.width - queuedPreviewRadius - 12);
+    const queuedY = y + 2;
+    if (!isPreviewBlockedByVegetable(queuedX, queuedY, queuedPreviewRadius)) {
+      drawQueuedPreview(ctx, state.previewLevel, queuedX, queuedY, now);
+    }
+  }
+
+  if (state.aiming || isPrecisionAimActive(now)) {
     ctx.strokeStyle = 'rgba(45, 70, 35, 0.5)';
     ctx.lineWidth = 2;
     ctx.shadowColor = 'rgba(255, 255, 255, 0.75)';

@@ -141,7 +141,8 @@ function dropVegetable() {
   if (state.fertilizerCharges > 0) {
     const x = clamp(state.aimX, 26, state.width - 26);
     const fertilizer = createFertilizer(x, 72);
-    Body.setVelocity(fertilizer, { x: (Math.random() - 0.5) * 0.9 + windVelocityOffset(now), y: 0 });
+    const dropVelocityMultiplier = talentDropVelocityMultiplier() * (isPrecisionAimActive(now) ? 0.55 : 1);
+    Body.setVelocity(fertilizer, { x: (Math.random() - 0.5) * 0.9 * dropVelocityMultiplier + windVelocityOffset(now), y: 0 });
     Body.setAngle(fertilizer, (Math.random() - 0.5) * 0.5);
     Body.setAngularVelocity(fertilizer, (Math.random() - 0.5) * 0.18);
     state.fertilizerCharges = Math.max(0, state.fertilizerCharges - 1);
@@ -155,14 +156,15 @@ function dropVegetable() {
   const x = clamp(state.aimX, cfg.radius + 8, state.width - cfg.radius - 8);
   const body = createVegetable(state.nextLevel, x, 72);
   const windOffset = windVelocityOffset(now);
-  Body.setVelocity(body, { x: (Math.random() - 0.5) * 1.2 + windOffset, y: 0 });
+  const dropVelocityMultiplier = talentDropVelocityMultiplier() * (isPrecisionAimActive(now) ? 0.55 : 1);
+  Body.setVelocity(body, { x: (Math.random() - 0.5) * 1.2 * dropVelocityMultiplier + windOffset, y: 0 });
   Body.setAngle(body, (Math.random() - 0.5) * 0.7);
   Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.16);
   if (isDoubleDropActive(now)) {
     const offset = cfg.radius + 10;
     const secondX = clamp(x + (x < state.width / 2 ? offset : -offset), cfg.radius + 8, state.width - cfg.radius - 8);
     const second = createVegetable(state.nextLevel, secondX, 72);
-    Body.setVelocity(second, { x: (Math.random() - 0.5) * 1.2 + windOffset * 0.8, y: 0 });
+    Body.setVelocity(second, { x: (Math.random() - 0.5) * 1.2 * dropVelocityMultiplier + windOffset * 0.8, y: 0 });
     Body.setAngle(second, (Math.random() - 0.5) * 0.7);
     Body.setAngularVelocity(second, (Math.random() - 0.5) * 0.16);
   }
@@ -208,6 +210,7 @@ function endAim(event) {
 
 function mergeVegetables(a, b) {
   if (
+    state.debugMergeDisabled ||
     a.isMerging ||
     b.isMerging ||
     a.isBlasting ||
@@ -261,6 +264,7 @@ function resetGame() {
   state.score = 0;
   state.scoreRemainder = 0;
   state.bestLevel = 1;
+  state.previewLevel = null;
   state.gameOver = false;
   state.aiming = false;
   state.paused = false;
@@ -275,13 +279,15 @@ function resetGame() {
   state.corruptionActive = false;
   state.corruptionLastAt = 0;
   state.debugCorruptionUnlocked = false;
+  state.debugMergeDisabled = false;
   state.activeEnvironmentEvents = [];
   state.environmentEventsPausedAt = 0;
   state.nextEnvironmentEventRollAt = 0;
+  state.itemBoardRun = false;
+  state.reviveUsedThisRun = false;
   state.scoreSaved = false;
   leaderboardState.recentScoreRow = null;
   leaderboardState.recentScoreRank = null;
-  leaderboardState.recentComboRank = null;
   comboBursts.length = 0;
   gameOverPanel.hidden = true;
   pausePanel.hidden = true;
@@ -311,7 +317,7 @@ function finishGameLegacy() {
 }
 
 async function finishGame(options = {}) {
-  const { openScoreLeaderboard = true, showGameOverPanel = false } = options;
+  const { openScoreLeaderboard = false, showGameOverPanel = true } = options;
   if (state.gameOver) return;
 
   state.gameOver = true;
@@ -324,18 +330,108 @@ async function finishGame(options = {}) {
   pauseButton.textContent = '暫停';
   finalScoreEl.textContent = `分數 ${state.score}`;
   finalComboEl.textContent = `最高 Combo ${state.bestCombo}`;
+  updateReviveButton();
   gameOverPanel.hidden = !showGameOverPanel;
   stopMusic();
   playGameOverSound();
   recordDailyMissionProgress('play', 1);
-  const scoreSubmit = submitLeaderboardScore();
+  const canRevive = showGameOverPanel && state.reviveTickets > 0 && !state.reviveUsedThisRun;
+  const scoreSubmit = canRevive ? Promise.resolve(null) : submitLeaderboardScore();
   if (openScoreLeaderboard) {
-    openLeaderboard('score');
+    openLeaderboard(state.itemBoardRun ? 'item' : 'classic');
   }
   await scoreSubmit;
 
   if (openScoreLeaderboard && !leaderboardScene.hidden) {
     loadLeaderboard();
+  }
+}
+
+async function openGameOverLeaderboard() {
+  await submitLeaderboardScore();
+  openLeaderboard(state.itemBoardRun ? 'item' : 'classic');
+}
+
+async function playAgainFromGameOver() {
+  await submitLeaderboardScore();
+  resetGame();
+}
+
+function saveReviveTickets() {
+  localStorage.setItem('veggieMergeReviveTickets', String(state.reviveTickets));
+}
+
+function addReviveTickets(amount = 1) {
+  const value = Number(amount);
+  if (!Number.isFinite(value) || value <= 0) return;
+  state.reviveTickets += Math.floor(value);
+  saveReviveTickets();
+  updateReviveButton();
+}
+
+function updateReviveButton() {
+  const canRevive = state.reviveTickets > 0 && !state.reviveUsedThisRun;
+  reviveButton.disabled = !canRevive;
+  reviveButton.textContent = canRevive
+    ? `使用復活券 x${state.reviveTickets}`
+    : '沒有可用復活券';
+}
+
+function useReviveTicket() {
+  if (!state.gameOver || state.reviveUsedThisRun || state.reviveTickets <= 0) return;
+
+  state.reviveTickets -= 1;
+  state.reviveUsedThisRun = true;
+  state.itemBoardRun = true;
+  saveReviveTickets();
+  blastTopVegetables(REVIVE_BLAST_COUNT);
+
+  state.gameOver = false;
+  state.paused = false;
+  state.aiming = false;
+  state.pointerId = null;
+  state.suppressDropUntil = performance.now() + 650;
+  Composite.allBodies(world)
+    .filter((body) => body.label === 'vegetable')
+    .forEach((body) => {
+      body.dangerEnteredAt = null;
+      body.canTriggerDangerAt = performance.now() + 1600;
+    });
+  engine.timing.timeScale = 1;
+  gameOverPanel.hidden = true;
+  leaderboardScene.hidden = true;
+  pausePanel.hidden = true;
+  skillPanel.hidden = true;
+  debugPanel.hidden = true;
+  pauseButton.textContent = '暫停';
+  ensureAudio();
+  startMusic();
+  playClickSound();
+  updateHud();
+}
+
+function blastTopVegetables(count) {
+  const now = performance.now();
+  const toRemove = Composite.allBodies(world)
+    .filter((body) => body.label === 'vegetable' && !body.isMerging && !body.isBlasting)
+    .sort((a, b) => a.position.y - b.position.y || a.position.x - b.position.x)
+    .slice(0, count);
+
+  toRemove.forEach((body, index) => {
+    body.isBlasting = true;
+    body.blastStartedAt = now;
+    const radius = blastRadiusFor(body);
+    blastEffects.push({
+      x: body.position.x,
+      y: body.position.y,
+      startedAt: now + index * 12,
+      radius
+    });
+  });
+
+  if (toRemove.length) {
+    Composite.remove(world, toRemove);
+    recordDailyMissionProgress('blast', toRemove.length);
   }
 }
 
@@ -361,6 +457,7 @@ function returnToStartScene() {
   state.score = 0;
   state.scoreRemainder = 0;
   state.bestLevel = 1;
+  state.previewLevel = null;
   state.combo = 0;
   state.bestCombo = 0;
   state.comboDuration = 0;
@@ -370,9 +467,10 @@ function returnToStartScene() {
   state.activeEnvironmentEvents = [];
   state.environmentEventsPausedAt = 0;
   state.nextEnvironmentEventRollAt = 0;
+  state.itemBoardRun = false;
+  state.reviveUsedThisRun = false;
   leaderboardState.recentScoreRow = null;
   leaderboardState.recentScoreRank = null;
-  leaderboardState.recentComboRank = null;
   comboBursts.length = 0;
   engine.timing.timeScale = 1;
   resetSkillState();
@@ -407,7 +505,7 @@ function checkDangerLine() {
     const speed = Math.hypot(body.velocity.x, body.velocity.y);
     const isRestingAboveLine = body.bounds.min.y < state.dangerY && speed < 0.45;
     body.dangerEnteredAt = isRestingAboveLine ? (body.dangerEnteredAt ?? now) : null;
-    if (body.dangerEnteredAt && now - body.dangerEnteredAt >= 2000) {
+    if (body.dangerEnteredAt && now - body.dangerEnteredAt >= 2000 + talentDangerDelayBonus() + safetyCushionBonus(now)) {
       finishGame();
       return;
     }

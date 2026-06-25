@@ -57,6 +57,13 @@ function loadPlayerCoins() {
   return Number.isFinite(coins) && coins > 0 ? Math.floor(coins) : 0;
 }
 
+function loadReviveTickets() {
+  const stored = localStorage.getItem('veggieMergeReviveTickets');
+  if (stored === null) return STARTING_REVIVE_TICKETS;
+  const tickets = Number(stored);
+  return Number.isFinite(tickets) && tickets > 0 ? Math.floor(tickets) : 0;
+}
+
 function loadOwnedTalents() {
   try {
     const stored = JSON.parse(localStorage.getItem('veggieMergeOwnedTalents') || '[]');

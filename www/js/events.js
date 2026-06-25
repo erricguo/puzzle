@@ -61,6 +61,18 @@ debugPestButton.addEventListener('click', () => {
   debugTriggerEnvironmentEvent('pest');
   playClickSound();
 });
+debugPumpkinButton.addEventListener('click', () => {
+  debugDropPumpkins(10);
+  playClickSound();
+});
+debugMergeToggleButton.addEventListener('click', () => {
+  debugToggleMerge();
+  playClickSound();
+});
+debugCoinButton.addEventListener('click', () => {
+  addCoins(10000);
+  playClickSound();
+});
 startButton.addEventListener('click', startGame);
 startScene.addEventListener('click', startGame);
 startDailyButton.addEventListener('click', (event) => {
@@ -77,19 +89,21 @@ startEncyclopediaButton.addEventListener('click', (event) => {
 });
 startLeaderboardButton.addEventListener('click', (event) => {
   event.stopPropagation();
-  openLeaderboard('score');
+  openLeaderboard('classic');
 });
-gameOverLeaderboardButton.addEventListener('click', () => openLeaderboard('score'));
+gameOverLeaderboardButton.addEventListener('click', openGameOverLeaderboard);
 closeLeaderboardButton.addEventListener('click', closeLeaderboard);
 dailyScene.addEventListener('click', (event) => event.stopPropagation());
 closeDailyButton.addEventListener('click', closeDailyMissions);
 talentScene.addEventListener('click', (event) => event.stopPropagation());
 closeTalentButton.addEventListener('click', closeTalentShop);
+talentShopTabButton.addEventListener('click', () => setShopTab('talent'));
+itemShopTabButton.addEventListener('click', () => setShopTab('item'));
 encyclopediaScene.addEventListener('click', (event) => event.stopPropagation());
 closeEncyclopediaButton.addEventListener('click', closeEncyclopedia);
 leaderboardHomeButton.addEventListener('click', returnToStartScene);
-scoreTabButton.addEventListener('click', () => openLeaderboard('score'));
-comboTabButton.addEventListener('click', () => openLeaderboard('combo'));
+scoreTabButton.addEventListener('click', () => openLeaderboard('classic'));
+comboTabButton.addEventListener('click', () => openLeaderboard('item'));
 googleSignInButton.closest('.account-row')?.addEventListener('click', (event) => {
   event.stopPropagation();
 });
@@ -98,6 +112,7 @@ googleSignInButton.addEventListener('click', (event) => {
   signInWithGoogle();
 });
 pauseButton.addEventListener('click', togglePause);
+reviveButton.addEventListener('click', useReviveTicket);
 resumeButton.addEventListener('click', () => setPaused(false));
 endGameButton.addEventListener('click', endCurrentGame);
 soundButton.addEventListener('click', () => {
@@ -135,7 +150,7 @@ vibrationToggle.addEventListener('click', () => {
   playClickSound();
   vibrate(28);
 });
-playAgainButton.addEventListener('click', resetGame);
+playAgainButton.addEventListener('click', playAgainFromGameOver);
 window.addEventListener('resize', resizeGame);
 window.addEventListener('orientationchange', () => setTimeout(resizeGame, 250));
 document.addEventListener('visibilitychange', updatePageAudioState);

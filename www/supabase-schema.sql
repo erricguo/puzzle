@@ -7,11 +7,19 @@ create table if not exists public.vegetable_merge_scores (
   score integer not null check (score >= 0),
   best_combo integer not null default 0 check (best_combo >= 0),
   best_level integer not null default 1 check (best_level between 1 and 10),
+  board_type text not null default 'classic' check (board_type in ('classic', 'item')),
   created_at timestamptz not null default now()
 );
 
+alter table public.vegetable_merge_scores
+  add column if not exists board_type text not null default 'classic'
+  check (board_type in ('classic', 'item'));
+
 create index if not exists vegetable_merge_scores_score_idx
   on public.vegetable_merge_scores (score desc, created_at asc);
+
+create index if not exists vegetable_merge_scores_board_score_idx
+  on public.vegetable_merge_scores (board_type, score desc, best_combo desc, created_at asc);
 
 create index if not exists vegetable_merge_scores_combo_idx
   on public.vegetable_merge_scores (best_combo desc, score desc, created_at asc);
@@ -32,6 +40,7 @@ create policy "Anyone can submit vegetable scores"
     score >= 0
     and best_combo >= 0
     and best_level between 1 and 10
+    and board_type in ('classic', 'item')
     and length(player_name) between 1 and 40
   );
 

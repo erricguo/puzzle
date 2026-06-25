@@ -11,6 +11,10 @@ const FERTILIZER_IMAGE_SRC = 'assets/images/fertilizer.png';
 const PERMANENT_SKILL_MAX_STACKS = 5;
 const SKILL_CHOICE_UNLOCK_DELAY = 1500;
 const SKILL_CHOICE_LEVEL_INTERVAL = 10;
+const LONG_TEMP_SKILL_DURATION = 15000;
+const GOLDEN_TIME_DURATION = 20000;
+const MERGE_SENSE_DURATION = 12000;
+const MAGNET_MERGE_DURATION = 10000;
 const DISABLED_SKILL_IDS = new Set(['fertilizer']);
 
 const fertilizerImage = new Image();
@@ -21,6 +25,7 @@ const SKILL_POOL = [
     id: 'fast_fall',
     name: '急速降落',
     type: '限時',
+    rarity: 'green',
     description: '5 秒內，蔬菜降下速度增加 50%，投放速度增加 30%。',
     apply: () => activateTimedSkill('fastFallExpiresAt')
   },
@@ -28,6 +33,7 @@ const SKILL_POOL = [
     id: 'combo_freeze',
     name: 'Combo 凍結',
     type: '限時',
+    rarity: 'blue',
     description: '5 秒內，Combo 時間不中斷。',
     apply: () => activateTimedSkill('comboFreezeExpiresAt')
   },
@@ -35,6 +41,7 @@ const SKILL_POOL = [
     id: 'double_drop',
     name: '雙重投放',
     type: '限時',
+    rarity: 'purple',
     description: '5 秒內，一次可以丟兩顆蔬菜。',
     apply: () => activateTimedSkill('doubleDropExpiresAt')
   },
@@ -42,6 +49,7 @@ const SKILL_POOL = [
     id: 'combo_score',
     name: 'Combo 強化',
     type: '永久',
+    rarity: 'blue',
     description: 'COMBO 分數加成永久 +10%。',
     apply: () => {
       state.comboScoreBonus += 1;
@@ -51,6 +59,7 @@ const SKILL_POOL = [
     id: 'drop_speed',
     name: '重力栽培',
     type: '永久',
+    rarity: 'white',
     description: '蔬菜掉落速度永久 +10%。',
     apply: () => {
       state.dropSpeedBonus += 0.1;
@@ -61,13 +70,95 @@ const SKILL_POOL = [
     id: 'blast_three',
     name: '蔬菜爆裂',
     type: '立即',
+    rarity: 'purple',
     description: '隨機炸裂三個蔬菜，附近蔬菜也會消失。',
     apply: blastRandomVegetables
+  },
+  {
+    id: 'magnet_merge',
+    name: '磁吸合成',
+    type: '限時',
+    rarity: 'gold',
+    description: '10 秒內，同等級蔬菜會微微互相靠近。',
+    apply: () => activateTimedSkill('magnetMergeExpiresAt', MAGNET_MERGE_DURATION)
+  },
+  {
+    id: 'clear_peas',
+    name: '小菜清場',
+    type: '立即',
+    rarity: 'green',
+    description: '立即清除場上所有 1 層蔬菜，並獲得少量分數。',
+    apply: clearSmallVegetables
+  },
+  {
+    id: 'precision_aim',
+    name: '精準瞄準',
+    type: '限時',
+    rarity: 'green',
+    description: '15 秒內顯示落點輔助線，且掉落水平偏移降低。',
+    apply: () => activateTimedSkill('precisionAimExpiresAt', LONG_TEMP_SKILL_DURATION)
+  },
+  {
+    id: 'combo_insurance',
+    name: 'Combo 保險',
+    type: '一次',
+    rarity: 'purple',
+    description: '下一次 Combo 中斷時不歸零，保留目前 Combo 一次。',
+    apply: activateComboInsurance
+  },
+  {
+    id: 'random_upgrade',
+    name: '蔬菜升級',
+    type: '立即',
+    rarity: 'blue',
+    description: '隨機將 1 顆低階蔬菜升 1 級。',
+    apply: upgradeRandomVegetable
+  },
+  {
+    id: 'golden_time',
+    name: '黃金時間',
+    type: '限時',
+    rarity: 'gold',
+    description: '20 秒內獲得分數 +20%。',
+    apply: () => activateTimedSkill('goldenTimeExpiresAt', GOLDEN_TIME_DURATION)
+  },
+  {
+    id: 'safety_cushion',
+    name: '安全氣墊',
+    type: '限時',
+    rarity: 'blue',
+    description: '15 秒內，危險線判定延遲 +1 秒。',
+    apply: () => activateTimedSkill('safetyCushionExpiresAt', LONG_TEMP_SKILL_DURATION)
+  },
+  {
+    id: 'lift_pulse',
+    name: '重力反轉脈衝',
+    type: '立即',
+    rarity: 'purple',
+    description: '立即給場上蔬菜一個小幅向上推力。',
+    apply: applyLiftPulse
+  },
+  {
+    id: 'merge_sense',
+    name: '同色感應',
+    type: '限時',
+    rarity: 'gold',
+    description: '12 秒內，同等級蔬菜靠近時更容易合成。',
+    apply: () => activateTimedSkill('mergeSenseExpiresAt', MERGE_SENSE_DURATION)
+  },
+  {
+    id: 'reroll_next',
+    name: '下一顆重抽',
+    type: '立即',
+    rarity: 'white',
+    description: '立即重抽下一顆蔬菜，且不高於 3 層。',
+    apply: rerollNextVegetable
   },
   {
     id: 'fertilizer',
     name: '肥料',
     type: '道具',
+    rarity: 'purple',
     description: '接下來 5 次投放改為肥料，被砸到的蔬菜會進階。',
     imageSrc: FERTILIZER_IMAGE_SRC,
     apply: activateFertilizerMode
@@ -128,6 +219,7 @@ function showDebugPanel(event) {
   event?.preventDefault();
   if (!state.hasStarted || state.gameOver) return;
 
+  updateDebugMergeButton();
   debugPanel.hidden = !debugPanel.hidden;
 }
 
@@ -174,12 +266,53 @@ function debugTriggerEnvironmentEvent(id) {
   updateHud();
 }
 
+function debugDropPumpkins(count = 10) {
+  if (!state.hasStarted || state.gameOver) return;
+
+  const level = VEGETABLES.length - 1;
+  const radius = VEGETABLES[level].radius;
+  const spacing = Math.max(radius * 0.62, 34);
+  const startX = state.width / 2 - spacing * (count - 1) / 2;
+
+  for (let index = 0; index < count; index++) {
+    window.setTimeout(() => {
+      if (!state.hasStarted || state.gameOver) return;
+      const rowOffset = Math.floor(index / 5) * (radius * 0.35);
+      const x = clamp(startX + spacing * index, radius + 8, state.width - radius - 8);
+      const pumpkin = createVegetable(level, x, 72 - rowOffset);
+      Body.setVelocity(pumpkin, {
+        x: (Math.random() - 0.5) * 0.9,
+        y: -0.4 + Math.random() * 0.4
+      });
+      Body.setAngularVelocity(pumpkin, (Math.random() - 0.5) * 0.18);
+    }, index * 90);
+  }
+
+  closeDebugPanel();
+}
+
+function debugToggleMerge() {
+  if (!state.hasStarted || state.gameOver) return;
+
+  state.debugMergeDisabled = !state.debugMergeDisabled;
+  updateDebugMergeButton();
+}
+
+function updateDebugMergeButton() {
+  debugMergeToggleButton.textContent = state.debugMergeDisabled ? '允許合成' : '禁止合成';
+  debugMergeToggleButton.classList.toggle('active', state.debugMergeDisabled);
+}
+
 function pickSkillOptions(skills) {
   const shuffled = [...skills].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, SKILL_CHOICES_PER_PICK);
 }
 
 function pickRefreshedSkillOptions(available) {
+  if (!talentGuaranteesFreshSkillRefresh()) {
+    return pickSkillOptions(available);
+  }
+
   const currentIds = new Set(state.currentSkillChoiceIds);
   const alternates = available.filter((skill) => !currentIds.has(skill.id));
   if (!alternates.length) return pickSkillOptions(available);
@@ -223,12 +356,12 @@ function renderSkillCards(skills) {
   skills.forEach((skill) => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'skill-card';
+    button.className = `skill-card rarity-${skill.rarity || 'white'}`;
     const maxStacks = maxStacksForSkill(skill);
     const stacks = Number.isFinite(maxStacks) ? skillPickCount(skill.id) : 0;
     const stackLabel = stacks ? ` ${stacks}/${maxStacks}` : '';
     button.innerHTML = `
-      <small>${escapeHtml(skill.type)}${stackLabel}</small>
+      <small>${escapeHtml(rarityLabel(skill.rarity))} · ${escapeHtml(skill.type)}${stackLabel}</small>
       ${skill.imageSrc ? `<img src="${escapeHtml(skill.imageSrc)}" alt="" />` : ''}
       <strong>${escapeHtml(skill.name)}</strong>
       <span>${escapeHtml(skill.description)}</span>
@@ -245,6 +378,16 @@ function renderSkillCards(skills) {
   if (locked) {
     window.setTimeout(updateSkillCardLockState, Math.max(0, state.skillChoicesUnlockAt - performance.now()));
   }
+}
+
+function rarityLabel(rarity = 'white') {
+  return ({
+    white: '白',
+    green: '綠',
+    blue: '藍',
+    purple: '紫',
+    gold: '金'
+  })[rarity] || '白';
 }
 
 function updateSkillCardLockState() {
@@ -376,9 +519,9 @@ function stopSkillPanelBackdropEvent(event) {
   }
 }
 
-function activateTimedSkill(key) {
+function activateTimedSkill(key, duration = TEMP_SKILL_DURATION) {
   const now = performance.now();
-  state[key] = Math.max(state[key], now) + TEMP_SKILL_DURATION;
+  state[key] = Math.max(state[key], now) + duration;
   updateGravity(now);
 }
 
@@ -408,11 +551,129 @@ function updateActiveSkills(now = performance.now()) {
   const activeCount = [
     state.fastFallExpiresAt,
     state.comboFreezeExpiresAt,
-    state.doubleDropExpiresAt
+    state.doubleDropExpiresAt,
+    state.magnetMergeExpiresAt,
+    state.precisionAimExpiresAt,
+    state.goldenTimeExpiresAt,
+    state.safetyCushionExpiresAt,
+    state.mergeSenseExpiresAt
   ].filter((expiresAt) => now < expiresAt).length;
 
   state.activeSkillLevel = activeCount;
   updateGravity(now);
+  updateMagnetMerge(now);
+  updateMergeSense(now);
+}
+
+function isPrecisionAimActive(now = performance.now()) {
+  return now < state.precisionAimExpiresAt;
+}
+
+function isGoldenTimeActive(now = performance.now()) {
+  return now < state.goldenTimeExpiresAt;
+}
+
+function safetyCushionBonus(now = performance.now()) {
+  return now < state.safetyCushionExpiresAt ? 1000 : 0;
+}
+
+function activateComboInsurance() {
+  state.comboInsuranceCharges += 1;
+  updateHud();
+}
+
+function clearSmallVegetables() {
+  const toRemove = Composite.allBodies(world)
+    .filter((body) => body.label === 'vegetable' && body.vegLevel === 0 && !body.isMerging && !body.isBlasting);
+  if (!toRemove.length) return false;
+
+  Composite.remove(world, toRemove);
+  const scoreGain = scoreWithGoldenBonus(toRemove.length);
+  state.score += scoreGain;
+  recordDailyMissionProgress('blast', toRemove.length);
+  recordDailyMissionProgress('score', scoreGain);
+  updateHud();
+}
+
+function scoreWithGoldenBonus(amount) {
+  const rawScore = amount * (isGoldenTimeActive() ? 1.2 : 1);
+  const wholeScore = Math.floor(rawScore);
+  state.scoreRemainder += rawScore - wholeScore;
+  const carriedScore = Math.floor(state.scoreRemainder);
+  state.scoreRemainder -= carriedScore;
+  return wholeScore + carriedScore;
+}
+
+function upgradeRandomVegetable() {
+  const candidates = Composite.allBodies(world)
+    .filter((body) => body.label === 'vegetable' && !body.isMerging && !body.isBlasting && !body.isCorrupted && body.vegLevel < VEGETABLES.length - 1);
+  if (!candidates.length) return false;
+
+  const target = candidates[Math.floor(Math.random() * candidates.length)];
+  return applyFertilizerToVegetable(target, null);
+}
+
+function applyLiftPulse() {
+  const bodies = Composite.allBodies(world)
+    .filter((body) => body.label === 'vegetable' && !body.isMerging && !body.isBlasting);
+  if (!bodies.length) return false;
+
+  bodies.forEach((body) => {
+    Body.setVelocity(body, {
+      x: body.velocity.x * 0.72,
+      y: Math.min(body.velocity.y - 3.2, -2.2)
+    });
+    Body.setAngularVelocity(body, body.angularVelocity * 0.6 + (Math.random() - 0.5) * 0.12);
+    body.dangerEnteredAt = null;
+  });
+}
+
+function rerollNextVegetable() {
+  state.previewLevel = Math.floor(Math.random() * 3);
+  setNextLevel();
+  updateHud();
+}
+
+function updateMagnetMerge(now = performance.now()) {
+  if (now >= state.magnetMergeExpiresAt) return;
+  const bodies = Composite.allBodies(world)
+    .filter((body) => body.label === 'vegetable' && !body.isMerging && !body.isBlasting && !body.isCorrupted);
+
+  for (let i = 0; i < bodies.length; i++) {
+    for (let j = i + 1; j < bodies.length; j++) {
+      const a = bodies[i];
+      const b = bodies[j];
+      if (a.vegLevel !== b.vegLevel) continue;
+      const dx = b.position.x - a.position.x;
+      const dy = b.position.y - a.position.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance <= 0 || distance > 150) continue;
+      const force = 0.000018 * (1 - distance / 150);
+      const fx = dx / distance * force;
+      const fy = dy / distance * force;
+      Body.applyForce(a, a.position, { x: fx * a.mass, y: fy * a.mass });
+      Body.applyForce(b, b.position, { x: -fx * b.mass, y: -fy * b.mass });
+    }
+  }
+}
+
+function updateMergeSense(now = performance.now()) {
+  if (now >= state.mergeSenseExpiresAt) return;
+  const bodies = Composite.allBodies(world)
+    .filter((body) => body.label === 'vegetable' && !body.isMerging && !body.isBlasting && !body.isCorrupted);
+
+  for (let i = 0; i < bodies.length; i++) {
+    for (let j = i + 1; j < bodies.length; j++) {
+      const a = bodies[i];
+      const b = bodies[j];
+      if (a.vegLevel !== b.vegLevel || a.vegLevel >= VEGETABLES.length - 1) continue;
+      const mergeDistance = (VEGETABLES[a.vegLevel].radius + VEGETABLES[b.vegLevel].radius) * 1.18;
+      if (Math.hypot(a.position.x - b.position.x, a.position.y - b.position.y) <= mergeDistance) {
+        mergeVegetables(a, b);
+        return;
+      }
+    }
+  }
 }
 
 function blastRandomVegetables() {
@@ -457,9 +718,10 @@ function blastRandomVegetables() {
     Composite.remove(world, remaining);
   }, BLAST_ANIMATION_DURATION);
 
-  state.score += toRemove.length;
+  const scoreGain = scoreWithGoldenBonus(toRemove.length);
+  state.score += scoreGain;
   recordDailyMissionProgress('blast', toRemove.length);
-  recordDailyMissionProgress('score', toRemove.length);
+  recordDailyMissionProgress('score', scoreGain);
   updateHud();
 }
 
@@ -573,8 +835,14 @@ function resetSkillState() {
   state.comboFreezeExpiresAt = 0;
   state.comboFreezeLastAt = 0;
   state.doubleDropExpiresAt = 0;
+  state.magnetMergeExpiresAt = 0;
+  state.precisionAimExpiresAt = 0;
+  state.goldenTimeExpiresAt = 0;
+  state.safetyCushionExpiresAt = 0;
+  state.mergeSenseExpiresAt = 0;
   state.fertilizerCharges = 0;
   state.activeSkillLevel = 0;
+  state.comboInsuranceCharges = 0;
   blastEffects.length = 0;
   fertilizerEffects.length = 0;
   skillPanel.hidden = true;

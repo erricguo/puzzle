@@ -1,8 +1,10 @@
 function setNextLevel() {
-  state.nextLevel = randomSpawnLevel();
+  state.nextLevel = Number.isInteger(state.previewLevel) ? state.previewLevel : randomSpawnLevel();
+  state.previewLevel = randomSpawnLevel();
+  nextLabelEl.hidden = state.fertilizerCharges <= 0;
   nextLabelEl.textContent = state.fertilizerCharges > 0
     ? `肥料剩餘: ${state.fertilizerCharges}`
-    : `下一顆: ${levelLabel(state.nextLevel)}`;
+    : '';
 }
 
 function updateHud() {
@@ -29,7 +31,7 @@ function comboScoreMultiplier(combo) {
 }
 
 function scoreWithComboBonus(baseScore, combo) {
-  const rawScore = baseScore * comboScoreMultiplier(combo);
+  const rawScore = baseScore * comboScoreMultiplier(combo) * (isGoldenTimeActive() ? 1.2 : 1);
   const wholeScore = Math.floor(rawScore);
   state.scoreRemainder += rawScore - wholeScore;
   const carriedScore = Math.floor(state.scoreRemainder);
@@ -48,6 +50,12 @@ function clearExpiredCombo(now = performance.now()) {
 
   state.comboFreezeLastAt = 0;
   if (state.combo > 0 && now >= state.comboExpiresAt) {
+    if (state.comboInsuranceCharges > 0) {
+      state.comboInsuranceCharges -= 1;
+      state.comboDuration = comboDurationFor(state.combo);
+      state.comboExpiresAt = now + state.comboDuration;
+      return;
+    }
     state.combo = 0;
     state.comboDuration = 0;
     state.comboExpiresAt = 0;

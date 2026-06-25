@@ -175,7 +175,7 @@ function claimDailyMissionReward(missionId) {
   if (!mission || !def || !mission.completed || mission.rewardClaimed) return;
 
   mission.rewardClaimed = true;
-  addCoins(def.reward);
+  addCoins(dailyMissionReward(def));
   saveDailyMissionState();
   renderDailyMissions();
 }
@@ -196,7 +196,7 @@ function recordDailyMissionProgress(kind, amount = 1) {
     mission.completed = mission.progress >= def.target;
     if (justCompleted && !mission.rewardClaimed) {
       mission.rewardClaimed = true;
-      addCoins(def.reward);
+      addCoins(dailyMissionReward(def));
     }
     changed = true;
   }
@@ -206,6 +206,10 @@ function recordDailyMissionProgress(kind, amount = 1) {
   if (dailyScene && !dailyScene.hidden) {
     renderDailyMissions();
   }
+}
+
+function dailyMissionReward(def) {
+  return Math.ceil(def.reward * talentMissionRewardMultiplier());
 }
 
 function renderDailyMissions() {
@@ -222,13 +226,14 @@ function renderDailyMissions() {
 
     const progress = clamp(mission.progress, 0, def.target);
     const percent = clamp((progress / def.target) * 100, 0, 100);
+    const reward = dailyMissionReward(def);
     const item = document.createElement('article');
     item.className = `daily-mission${mission.completed ? ' completed' : ''}`;
     item.innerHTML = `
       <div class="daily-mission-copy">
         <strong>${escapeHtml(def.title)}</strong>
         <span>${escapeHtml(def.description)}</span>
-        <em><img src="assets/images/coin.png" alt="" /> 獎勵 ${def.reward}</em>
+        <em><img src="assets/images/coin.png" alt="" /> 獎勵 ${reward}</em>
       </div>
       <div class="daily-progress">
         <div class="daily-progress-row">
@@ -240,7 +245,7 @@ function renderDailyMissions() {
         </div>
       </div>
       ${mission.completed && !mission.rewardClaimed
-        ? `<button class="daily-claim-button" type="button" data-mission-id="${escapeHtml(mission.id)}"><img src="assets/images/coin.png" alt="" /> 領取 ${def.reward}</button>`
+        ? `<button class="daily-claim-button" type="button" data-mission-id="${escapeHtml(mission.id)}"><img src="assets/images/coin.png" alt="" /> 領取 ${reward}</button>`
         : ''}
     `;
     item.querySelector('.daily-claim-button')?.addEventListener('click', (event) => {

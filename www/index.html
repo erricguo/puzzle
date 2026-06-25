@@ -40,11 +40,19 @@
         <div id="corruptionStatusEl" class="corruption-status" hidden>環境狀態：腐化</div>
       </div>
       <div id="gameOverPanel" class="game-over" hidden>
-        <strong>遊戲結束</strong>
-        <span id="finalScore">分數 0</span>
-        <span id="finalCombo">最高 Combo 0</span>
-        <button id="gameOverLeaderboardButton" type="button">排行榜</button>
-        <button id="playAgainButton" type="button">再玩一次</button>
+        <div class="game-over-inner">
+          <p>本局結算</p>
+          <strong>遊戲結束</strong>
+          <div class="game-over-stats" aria-label="本局成績">
+            <span id="finalScore">分數 0</span>
+            <span id="finalCombo">最高 Combo 0</span>
+          </div>
+          <button id="reviveButton" class="revive-button" type="button">使用復活券</button>
+          <div class="game-over-actions">
+            <button id="gameOverLeaderboardButton" type="button">排行榜</button>
+            <button id="playAgainButton" type="button">再玩一次</button>
+          </div>
+        </div>
       </div>
       <div id="pausePanel" class="pause-panel" hidden>
         <strong>暫停中</strong>
@@ -91,6 +99,9 @@
         <button id="debugWindButton" type="button">強風</button>
         <button id="debugRainButton" type="button">暴雨</button>
         <button id="debugPestButton" type="button">蟲害</button>
+        <button id="debugPumpkinButton" type="button">掉 10 顆南瓜</button>
+        <button id="debugMergeToggleButton" type="button">禁止合成</button>
+        <button id="debugCoinButton" type="button">+10000 金幣</button>
       </div>
     </section>
 
@@ -118,7 +129,7 @@
       <div class="start-actions">
         <button id="startButton" class="start-button" type="button">開始遊戲</button>
         <button id="startDailyButton" class="ghost-button daily-button" type="button">每日任務</button>
-        <button id="startTalentButton" class="ghost-button talent-button" type="button">天賦商店</button>
+        <button id="startTalentButton" class="ghost-button talent-button" type="button">商城</button>
         <button id="startEncyclopediaButton" class="ghost-button book-button" type="button">蔬菜圖鑑</button>
         <button id="startLeaderboardButton" class="ghost-button" type="button">查看排行榜</button>
       </div>
@@ -143,21 +154,26 @@
       </div>
     </section>
 
-    <section id="talentScene" class="talent-scene" aria-label="開局天賦商店" hidden>
+    <section id="talentScene" class="talent-scene" aria-label="商城" hidden>
       <div class="talent-panel">
         <header class="leaderboard-header">
           <div>
             <p id="talentSummary">永久天賦</p>
-            <h2>天賦商店</h2>
+            <h2>商城</h2>
           </div>
-          <button id="closeTalentButton" class="icon-button" type="button" aria-label="關閉天賦商店">×</button>
+          <button id="closeTalentButton" class="icon-button" type="button" aria-label="關閉商城">×</button>
         </header>
 
         <div id="talentCoinWallet" class="coin-wallet">
           <img src="assets/images/coin.png" alt="" />
           <b>0</b>
         </div>
+        <div class="shop-tabs" role="tablist" aria-label="商城分頁">
+          <button id="talentShopTabButton" class="active" type="button">天賦商店</button>
+          <button id="itemShopTabButton" type="button">道具商店</button>
+        </div>
         <div id="talentList" class="talent-list" aria-label="天賦列表"></div>
+        <div id="itemList" class="talent-list" aria-label="道具列表" hidden></div>
         <p class="talent-note">已購買的天賦會在每局開始時自動生效。</p>
       </div>
     </section>
@@ -187,10 +203,11 @@
         </header>
 
         <div class="leaderboard-tabs" role="tablist" aria-label="排行榜分頁">
-          <button id="scoreTabButton" class="active" type="button">分數榜</button>
-          <button id="comboTabButton" type="button">Combo</button>
+          <button id="scoreTabButton" class="active" type="button">經典榜</button>
+          <button id="comboTabButton" type="button">道具榜</button>
         </div>
 
+        <div id="leaderboardPersonalInfo" class="leaderboard-personal-info"></div>
         <ol id="leaderboardList" class="leaderboard-list"></ol>
         <p id="leaderboardMessage" class="leaderboard-message">載入中...</p>
         <button id="leaderboardHomeButton" class="leaderboard-home-button" type="button">返回主畫面</button>

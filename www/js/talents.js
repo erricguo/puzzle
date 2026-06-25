@@ -1,4 +1,5 @@
 const TALENT_STORAGE_KEY = 'veggieMergeOwnedTalents';
+let activeShopTab = 'talent';
 
 const TALENT_DEFS = [
   {
@@ -35,6 +36,52 @@ const TALENT_DEFS = [
     cost: 300,
     summary: '每次技能選擇多 1 次免費刷新。',
     effect: '技能刷新 +1'
+  },
+  {
+    id: 'stable_preview',
+    name: '穩定預告',
+    cost: 2000,
+    summary: '額外顯示再下一顆蔬菜，提前安排堆疊路線。',
+    effect: '預告 +1'
+  },
+  {
+    id: 'precision_drop',
+    name: '精準投放',
+    cost: 500,
+    summary: '蔬菜掉落時的水平隨機速度降低 20%。',
+    effect: '水平偏移 -20%'
+  },
+  {
+    id: 'basket_expand',
+    name: '菜籃擴容',
+    cost: 5000,
+    summary: '蔬菜碰到危險線後，多 0.4 秒才會結束遊戲。',
+    effect: '危險線 +0.4 秒'
+  },
+  {
+    id: 'mission_expert',
+    name: '任務達人',
+    cost: 5000,
+    summary: '每日任務金幣獎勵增加 10%。',
+    effect: '任務獎勵 +10%'
+  },
+  {
+    id: 'inspiration_pity',
+    name: '靈感保底',
+    cost: 1000,
+    summary: '刷新技能卡時，至少出現 1 張本輪未看過的技能。',
+    effect: '刷新保底'
+  }
+];
+
+const ITEM_SHOP_DEFS = [
+  {
+    id: 'revive_ticket',
+    name: '復活券',
+    cost: 500,
+    quantity: 1,
+    summary: '遊戲結束時可使用，炸掉最上方 30 顆蔬菜並繼續本局。',
+    effect: '持有可疊加'
   }
 ];
 
@@ -61,6 +108,22 @@ function buyTalent(id) {
   renderTalentShop();
 }
 
+function buyShopItem(id) {
+  const item = ITEM_SHOP_DEFS.find((entry) => entry.id === id);
+  if (!item) return;
+  if (!spendCoins(item.cost)) {
+    talentSummaryEl.textContent = '金幣不足';
+    return;
+  }
+
+  if (item.id === 'revive_ticket') {
+    addReviveTickets(item.quantity);
+  }
+
+  playClickSound();
+  renderItemShop();
+}
+
 function talentComboDurationBonus() {
   return hasTalent('combo_memory') ? 250 : 0;
 }
@@ -71,6 +134,26 @@ function talentGravityMultiplier() {
 
 function talentSkillRefreshBonus() {
   return hasTalent('extra_refresh') ? 1 : 0;
+}
+
+function talentHasStablePreview() {
+  return hasTalent('stable_preview');
+}
+
+function talentDropVelocityMultiplier() {
+  return hasTalent('precision_drop') ? 0.8 : 1;
+}
+
+function talentDangerDelayBonus() {
+  return hasTalent('basket_expand') ? 400 : 0;
+}
+
+function talentMissionRewardMultiplier() {
+  return hasTalent('mission_expert') ? 1.1 : 1;
+}
+
+function talentGuaranteesFreshSkillRefresh() {
+  return hasTalent('inspiration_pity');
 }
 
 function applyStartTalents() {
@@ -118,8 +201,53 @@ function renderTalentShop() {
   }
 }
 
+function renderItemShop() {
+  updateCoinUi();
+  talentSummaryEl.textContent = `復活券 ${state.reviveTickets} 張`;
+  itemListEl.replaceChildren();
+
+  for (const item of ITEM_SHOP_DEFS) {
+    const affordable = state.coins >= item.cost;
+    const card = document.createElement('article');
+    card.className = 'talent-card item-card';
+    card.innerHTML = `
+      <div class="talent-copy">
+        <small>${escapeHtml(item.effect)}</small>
+        <strong>${escapeHtml(item.name)}</strong>
+        <span>${escapeHtml(item.summary)}</span>
+      </div>
+      <button class="talent-buy-button" type="button" ${!affordable ? 'disabled' : ''} data-item-id="${escapeHtml(item.id)}">
+        <img src="assets/images/coin.png" alt="" /> ${item.cost}
+      </button>
+    `;
+    card.querySelector('.talent-buy-button')?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      buyShopItem(event.currentTarget.dataset.itemId);
+    });
+    itemListEl.appendChild(card);
+  }
+}
+
+function setShopTab(tab = activeShopTab) {
+  activeShopTab = tab === 'item' ? 'item' : 'talent';
+  const isTalentTab = activeShopTab === 'talent';
+  talentShopTabButton.classList.toggle('active', isTalentTab);
+  itemShopTabButton.classList.toggle('active', !isTalentTab);
+  talentListEl.hidden = !isTalentTab;
+  itemListEl.hidden = isTalentTab;
+  document.querySelector('.talent-note').textContent = isTalentTab
+    ? '已購買的天賦會在每局開始時自動生效。'
+    : '道具會存入背包，遊戲中符合條件時即可使用。';
+
+  if (isTalentTab) {
+    renderTalentShop();
+  } else {
+    renderItemShop();
+  }
+}
+
 function openTalentShop() {
-  renderTalentShop();
+  setShopTab(activeShopTab);
   talentScene.hidden = false;
 }
 

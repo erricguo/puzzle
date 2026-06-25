@@ -18,9 +18,11 @@ const state = {
   encyclopediaUnlockedLevels: loadEncyclopediaLevels(),
   dailyMissionState: loadDailyMissionState(),
   coins: loadPlayerCoins(),
+  reviveTickets: loadReviveTickets(),
   ownedTalents: loadOwnedTalents(),
   bestLevel: 1,
   nextLevel: 0,
+  previewLevel: null,
   aiming: false,
   aimX: 0,
   pointerId: null,
@@ -43,6 +45,7 @@ const state = {
   corruptionActive: false,
   corruptionLastAt: 0,
   debugCorruptionUnlocked: false,
+  debugMergeDisabled: false,
   activeEnvironmentEvents: [],
   environmentEventsPausedAt: 0,
   nextEnvironmentEventRollAt: 0,
@@ -59,8 +62,16 @@ const state = {
   comboFreezeExpiresAt: 0,
   comboFreezeLastAt: 0,
   doubleDropExpiresAt: 0,
+  magnetMergeExpiresAt: 0,
+  precisionAimExpiresAt: 0,
+  goldenTimeExpiresAt: 0,
+  safetyCushionExpiresAt: 0,
+  mergeSenseExpiresAt: 0,
   fertilizerCharges: 0,
   activeSkillLevel: 0,
+  comboInsuranceCharges: 0,
+  itemBoardRun: false,
+  reviveUsedThisRun: false,
   scoreSaved: false
 };
 
@@ -85,10 +96,10 @@ const hapticsState = {
   enabled: localStorage.getItem('veggieMergeHapticsEnabled') !== 'false'
 };
 const leaderboardState = {
-  activeTab: 'score',
+  activeTab: 'classic',
   rows: {
-    score: [],
-    combo: []
+    classic: [],
+    item: []
   },
   localRows: loadLocalLeaderboard(),
   isConfigured: false,
@@ -98,7 +109,6 @@ const leaderboardState = {
   isAuthBusy: false,
   recentScoreRow: null,
   recentScoreRank: null,
-  recentComboRank: null,
   guestPlayerId: localStorage.getItem('veggieMergeGuestPlayerId')
     || localStorage.getItem('veggieMergePlayerId')
     || createPlayerId(),
