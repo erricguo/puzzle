@@ -95,6 +95,10 @@ gameOverLeaderboardButton.addEventListener('click', openGameOverLeaderboard);
 closeLeaderboardButton.addEventListener('click', closeLeaderboard);
 dailyScene.addEventListener('click', (event) => event.stopPropagation());
 closeDailyButton.addEventListener('click', closeDailyMissions);
+dailyRefreshButton.addEventListener('click', (event) => {
+  event.stopPropagation();
+  refreshDailyMissionsWithAd();
+});
 talentScene.addEventListener('click', (event) => event.stopPropagation());
 closeTalentButton.addEventListener('click', closeTalentShop);
 talentShopTabButton.addEventListener('click', () => setShopTab('talent'));

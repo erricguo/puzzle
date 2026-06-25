@@ -1,5 +1,6 @@
 const DAILY_MISSION_STORAGE_KEY = 'veggieMergeDailyMissions';
 const DAILY_MISSION_COUNT = 3;
+const DAILY_MISSION_AD_REFRESH_LIMIT = 1;
 
 const DAILY_MISSION_DEFS = [
   {
@@ -77,12 +78,25 @@ function seededRandom(seed) {
   };
 }
 
-function pickDailyMissionIds(dateKey) {
-  const random = seededRandom(dailySeed(dateKey));
-  return [...DAILY_MISSION_DEFS]
+function pickDailyMissionIds(seedKey, excludedIds = []) {
+  const excluded = new Set(excludedIds);
+  const available = DAILY_MISSION_DEFS.filter((mission) => !excluded.has(mission.id));
+  const pool = available.length >= DAILY_MISSION_COUNT ? available : DAILY_MISSION_DEFS;
+  const random = seededRandom(dailySeed(seedKey));
+  return [...pool]
     .sort(() => random() - 0.5)
     .slice(0, DAILY_MISSION_COUNT)
     .map((mission) => mission.id);
+}
+
+function pickRefreshedDailyMissionIds(dateKey, currentIds) {
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    const missionIds = pickDailyMissionIds(`${dateKey}:refresh:${attempt}`, currentIds);
+    if (missionIds.some((id) => !currentIds.includes(id))) {
+      return missionIds;
+    }
+  }
+  return pickDailyMissionIds(`${dateKey}:refresh:fallback`);
 }
 
 function dailyMissionDef(id) {
@@ -101,6 +115,7 @@ function normalizeDailyMissionState(stored = state.dailyMissionState) {
 
   state.dailyMissionState = {
     date: dateKey,
+    adRefreshUsed: stored?.date === dateKey && stored?.adRefreshUsed === true,
     missions: missionIds
       .map((id) => {
         const def = dailyMissionDef(id);
@@ -115,7 +130,7 @@ function normalizeDailyMissionState(stored = state.dailyMissionState) {
         };
       })
       .filter(Boolean)
-      .slice(0, DAILY_MISSION_COUNT)
+      .filter((mission) => !mission.rewardClaimed)
   };
 
   saveDailyMissionState();
@@ -168,6 +183,21 @@ function setupDailyMissions() {
   renderDailyMissions();
 }
 
+function resetDailyMissionProgress(missionIds) {
+  return missionIds
+    .map((id) => {
+      const def = dailyMissionDef(id);
+      if (!def) return null;
+      return {
+        id,
+        progress: 0,
+        completed: false,
+        rewardClaimed: false
+      };
+    })
+    .filter(Boolean);
+}
+
 function claimDailyMissionReward(missionId) {
   normalizeDailyMissionState();
   const mission = state.dailyMissionState.missions.find((item) => item.id === missionId);
@@ -176,6 +206,7 @@ function claimDailyMissionReward(missionId) {
 
   mission.rewardClaimed = true;
   addCoins(dailyMissionReward(def));
+  state.dailyMissionState.missions = state.dailyMissionState.missions.filter((item) => item.id !== missionId);
   saveDailyMissionState();
   renderDailyMissions();
 }
@@ -192,12 +223,7 @@ function recordDailyMissionProgress(kind, amount = 1) {
       ? Math.max(mission.progress, amount)
       : mission.progress + amount;
     mission.progress = clamp(nextProgress, 0, def.target);
-    const justCompleted = !mission.completed && mission.progress >= def.target;
     mission.completed = mission.progress >= def.target;
-    if (justCompleted && !mission.rewardClaimed) {
-      mission.rewardClaimed = true;
-      addCoins(dailyMissionReward(def));
-    }
     changed = true;
   }
 
@@ -212,9 +238,67 @@ function dailyMissionReward(def) {
   return Math.ceil(def.reward * talentMissionRewardMultiplier());
 }
 
+function updateDailyRefreshButton() {
+  if (!dailyRefreshButton) return;
+  normalizeDailyMissionState();
+  const usedCount = state.dailyMissionState.adRefreshUsed ? DAILY_MISSION_AD_REFRESH_LIMIT : 0;
+  const refreshAvailable = usedCount < DAILY_MISSION_AD_REFRESH_LIMIT;
+  dailyRefreshButton.disabled = state.dailyMissionRefreshAdBusy || !refreshAvailable;
+  dailyRefreshButton.textContent = state.dailyMissionRefreshAdBusy
+    ? '廣告準備中...'
+    : refreshAvailable
+      ? '看廣告刷新任務'
+      : '今日已刷新';
+  dailyRefreshButton.classList.toggle('used', !refreshAvailable);
+  dailyRefreshButton.classList.toggle('ad-ready', refreshAvailable && !state.dailyMissionRefreshAdBusy);
+}
+
+async function refreshDailyMissionsWithAd() {
+  normalizeDailyMissionState();
+  if (state.dailyMissionRefreshAdBusy || state.dailyMissionState.adRefreshUsed) {
+    updateDailyRefreshButton();
+    return;
+  }
+
+  state.dailyMissionRefreshAdBusy = true;
+  updateDailyRefreshButton();
+
+  try {
+    const rewarded = await showRewardedDailyMissionRefreshAd();
+    if (!rewarded) return;
+
+    const currentIds = state.dailyMissionState.missions.map((mission) => mission.id);
+    const addedMissions = resetDailyMissionProgress(
+      pickRefreshedDailyMissionIds(state.dailyMissionState.date, currentIds)
+    );
+    state.dailyMissionState.missions.push(...addedMissions);
+    state.dailyMissionState.adRefreshUsed = true;
+    saveDailyMissionState();
+    renderDailyMissions();
+    playClickSound();
+  } catch (error) {
+    console.warn('每日任務刷新廣告播放失敗', error);
+    window.alert?.(`廣告目前無法顯示：${error?.message || '請稍後再試'}`);
+  } finally {
+    state.dailyMissionRefreshAdBusy = false;
+    updateDailyRefreshButton();
+  }
+}
+
+async function showRewardedDailyMissionRefreshAd() {
+  const adBridge = window.VeggieMergeAds?.showRewardedRefreshAd;
+  if (typeof adBridge === 'function') {
+    return await adBridge({ placement: 'daily_mission_refresh' }) === true;
+  }
+
+  window.alert?.('廣告尚未設定：請接入 window.VeggieMergeAds.showRewardedRefreshAd()，並在完整看完廣告後回傳 true。');
+  return false;
+}
+
 function renderDailyMissions() {
   normalizeDailyMissionState();
   updateCoinUi();
+  updateDailyRefreshButton();
   const completedCount = state.dailyMissionState.missions.filter((mission) => mission.completed).length;
   dailySummaryEl.textContent = `今日任務 ${completedCount}/${state.dailyMissionState.missions.length}`;
   dailyResetTextEl.textContent = `每日 00:00 更新 · ${state.dailyMissionState.date}`;

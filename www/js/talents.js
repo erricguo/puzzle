@@ -176,7 +176,10 @@ function renderTalentShop() {
   talentSummaryEl.textContent = `已擁有 ${state.ownedTalents.length}/${TALENT_DEFS.length}`;
   talentListEl.replaceChildren();
 
-  for (const talent of TALENT_DEFS) {
+  const sortedTalents = [...TALENT_DEFS]
+    .sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name));
+
+  for (const talent of sortedTalents) {
     const owned = hasTalent(talent.id);
     const affordable = state.coins >= talent.cost;
     const item = document.createElement('article');
@@ -206,7 +209,10 @@ function renderItemShop() {
   talentSummaryEl.textContent = `復活券 ${state.reviveTickets} 張`;
   itemListEl.replaceChildren();
 
-  for (const item of ITEM_SHOP_DEFS) {
+  const sortedItems = [...ITEM_SHOP_DEFS]
+    .sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name));
+
+  for (const item of sortedItems) {
     const affordable = state.coins >= item.cost;
     const card = document.createElement('article');
     card.className = 'talent-card item-card';

@@ -189,7 +189,7 @@ button {
 .combo-ui {
   position: absolute;
   left: 12px;
-  top: 74px;
+  top: 92px;
   width: min(116px, 32%);
   display: grid;
   gap: 4px;
@@ -218,6 +218,71 @@ button {
   height: 100%;
   border-radius: inherit;
   background: var(--combo-color, #68d84d);
+}
+
+.active-skill-bars {
+  position: absolute;
+  left: 12px;
+  top: 14px;
+  width: min(156px, 42%);
+  display: grid;
+  gap: 5px;
+}
+
+.active-skill-bar {
+  position: relative;
+  min-height: 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  overflow: hidden;
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 5px 12px rgba(48, 78, 35, 0.14);
+  color: #20311e;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.active-skill-bar span,
+.active-skill-bar b {
+  position: relative;
+  z-index: 1;
+}
+
+.active-skill-bar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.active-skill-bar i {
+  position: absolute;
+  inset: auto auto 0 0;
+  height: 4px;
+  border-radius: 0 8px 8px 0;
+  background: #edf4e7;
+}
+
+.active-skill-bar.rarity-green i {
+  background: #68d84d;
+}
+
+.active-skill-bar.rarity-blue i {
+  background: #54d6c9;
+}
+
+.active-skill-bar.rarity-purple i {
+  background: #8d70ff;
+}
+
+.active-skill-bar.rarity-gold i {
+  background: #ffd84d;
 }
 
 .corruption-status {
@@ -1622,9 +1687,26 @@ button {
   justify-items: end;
   min-width: 64px;
   color: #20311e;
-  font-size: 22px;
   font-weight: 900;
   line-height: 1;
+}
+
+.leaderboard-item .metric b {
+  color: #20311e;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.leaderboard-item .metric small {
+  margin-left: 2px;
+}
+
+.leaderboard-item .metric em {
+  margin-top: 4px;
+  color: #3d802f;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
 }
 
 .leaderboard-message {
@@ -1847,6 +1929,36 @@ button {
 .daily-claim-button:active {
   transform: translateY(3px);
   box-shadow: 0 2px 0 #c89b20, 0 6px 10px rgba(99, 74, 20, 0.12);
+}
+
+.daily-refresh-button {
+  justify-self: stretch;
+  padding: 10px 14px;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff8ca 0%, #ffd84d 100%);
+  box-shadow: 0 6px 0 #c89b20, 0 12px 18px rgba(99, 74, 20, 0.14);
+  color: #553911;
+  font-size: 14px;
+  font-weight: 1000;
+}
+
+.daily-refresh-button:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 #c89b20, 0 7px 12px rgba(99, 74, 20, 0.12);
+}
+
+.daily-refresh-button.used,
+.daily-refresh-button:disabled {
+  color: #6b7565;
+  background: linear-gradient(180deg, rgba(235, 241, 229, 0.86), rgba(206, 218, 198, 0.82));
+  box-shadow: inset 0 -2px 0 rgba(75, 143, 61, 0.08), 0 4px 0 rgba(94, 108, 88, 0.22);
+  transform: none;
+}
+
+.daily-refresh-button.ad-ready {
+  background: linear-gradient(180deg, #fff8ca 0%, #ffd84d 100%);
+  box-shadow: 0 6px 0 #c89b20, 0 12px 18px rgba(99, 74, 20, 0.14);
 }
 
 .daily-reset-text {

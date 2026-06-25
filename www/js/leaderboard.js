@@ -12,7 +12,10 @@ function saveLocalLeaderboard() {
 function normalizeLeaderboardRow(row) {
   return {
     ...row,
-    board_type: row.board_type === 'item' ? 'item' : 'classic'
+    score: Math.max(0, Math.floor(Number(row.score) || 0)),
+    best_combo: Math.max(0, Math.floor(Number(row.best_combo) || 0)),
+    board_type: row.board_type === 'item' ? 'item' : 'classic',
+    created_at: row.created_at || new Date().toISOString()
   };
 }
 
@@ -285,13 +288,19 @@ function renderLeaderboard() {
   const currentRunBoardType = state.itemBoardRun ? 'item' : 'classic';
   const recentMatchesBoard = leaderboardState.recentScoreRow
     && normalizeLeaderboardRow(leaderboardState.recentScoreRow).board_type === boardType;
+  const showPersonalInfo = state.hasStarted || state.gameOver || Boolean(leaderboardState.recentScoreRow);
 
   leaderboardListEl.replaceChildren();
-  leaderboardPersonalInfoEl.innerHTML = `
-    <span>${escapeHtml(leaderboardState.playerName || '訪客玩家')}</span>
-    <b>本局 Combo ${state.bestCombo || 0}</b>
-    <small>${currentRunBoardType === 'item' ? '本局將列入道具榜' : '本局將列入經典榜'}</small>
-  `;
+  leaderboardPersonalInfoEl.hidden = !showPersonalInfo;
+  if (showPersonalInfo) {
+    leaderboardPersonalInfoEl.innerHTML = `
+      <span>${escapeHtml(leaderboardState.playerName || '訪客玩家')}</span>
+      <b>本局 Combo ${state.bestCombo || 0}</b>
+      <small>${currentRunBoardType === 'item' ? '本局將列入道具榜' : '本局將列入經典榜'}</small>
+    `;
+  } else {
+    leaderboardPersonalInfoEl.replaceChildren();
+  }
 
   rows.forEach((row, index) => {
     const item = document.createElement('li');
@@ -304,7 +313,10 @@ function renderLeaderboard() {
         <strong>${escapeHtml(row.player_name || '訪客玩家')}</strong>
         <small>${escapeHtml(detailText)}</small>
       </span>
-      <span class="metric">${row.score || 0}<small>分</small></span>
+      <span class="metric">
+        <b>${row.score || 0}<small>分</small></b>
+        <em>COMBO ${row.best_combo || 0}</em>
+      </span>
     `;
     if (isRecent) {
       item.querySelector('.player strong')?.insertAdjacentHTML('beforeend', '<span class="recent-label">本局</span>');

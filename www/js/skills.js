@@ -26,6 +26,8 @@ const SKILL_POOL = [
     name: '急速降落',
     type: '限時',
     rarity: 'green',
+    timerKey: 'fastFallExpiresAt',
+    duration: TEMP_SKILL_DURATION,
     description: '5 秒內，蔬菜降下速度增加 50%，投放速度增加 30%。',
     apply: () => activateTimedSkill('fastFallExpiresAt')
   },
@@ -34,6 +36,8 @@ const SKILL_POOL = [
     name: 'Combo 凍結',
     type: '限時',
     rarity: 'blue',
+    timerKey: 'comboFreezeExpiresAt',
+    duration: TEMP_SKILL_DURATION,
     description: '5 秒內，Combo 時間不中斷。',
     apply: () => activateTimedSkill('comboFreezeExpiresAt')
   },
@@ -42,6 +46,8 @@ const SKILL_POOL = [
     name: '雙重投放',
     type: '限時',
     rarity: 'purple',
+    timerKey: 'doubleDropExpiresAt',
+    duration: TEMP_SKILL_DURATION,
     description: '5 秒內，一次可以丟兩顆蔬菜。',
     apply: () => activateTimedSkill('doubleDropExpiresAt')
   },
@@ -79,6 +85,8 @@ const SKILL_POOL = [
     name: '磁吸合成',
     type: '限時',
     rarity: 'gold',
+    timerKey: 'magnetMergeExpiresAt',
+    duration: MAGNET_MERGE_DURATION,
     description: '10 秒內，同等級蔬菜會微微互相靠近。',
     apply: () => activateTimedSkill('magnetMergeExpiresAt', MAGNET_MERGE_DURATION)
   },
@@ -95,6 +103,8 @@ const SKILL_POOL = [
     name: '精準瞄準',
     type: '限時',
     rarity: 'green',
+    timerKey: 'precisionAimExpiresAt',
+    duration: LONG_TEMP_SKILL_DURATION,
     description: '15 秒內顯示落點輔助線，且掉落水平偏移降低。',
     apply: () => activateTimedSkill('precisionAimExpiresAt', LONG_TEMP_SKILL_DURATION)
   },
@@ -119,6 +129,8 @@ const SKILL_POOL = [
     name: '黃金時間',
     type: '限時',
     rarity: 'gold',
+    timerKey: 'goldenTimeExpiresAt',
+    duration: GOLDEN_TIME_DURATION,
     description: '20 秒內獲得分數 +20%。',
     apply: () => activateTimedSkill('goldenTimeExpiresAt', GOLDEN_TIME_DURATION)
   },
@@ -127,6 +139,8 @@ const SKILL_POOL = [
     name: '安全氣墊',
     type: '限時',
     rarity: 'blue',
+    timerKey: 'safetyCushionExpiresAt',
+    duration: LONG_TEMP_SKILL_DURATION,
     description: '15 秒內，危險線判定延遲 +1 秒。',
     apply: () => activateTimedSkill('safetyCushionExpiresAt', LONG_TEMP_SKILL_DURATION)
   },
@@ -143,6 +157,8 @@ const SKILL_POOL = [
     name: '同色感應',
     type: '限時',
     rarity: 'gold',
+    timerKey: 'mergeSenseExpiresAt',
+    duration: MERGE_SENSE_DURATION,
     description: '12 秒內，同等級蔬菜靠近時更容易合成。',
     apply: () => activateTimedSkill('mergeSenseExpiresAt', MERGE_SENSE_DURATION)
   },
@@ -521,7 +537,13 @@ function stopSkillPanelBackdropEvent(event) {
 
 function activateTimedSkill(key, duration = TEMP_SKILL_DURATION) {
   const now = performance.now();
+  const startedAt = Math.max(state[key] - duration, now);
   state[key] = Math.max(state[key], now) + duration;
+  state.activeSkillTimers[key] = {
+    startedAt,
+    expiresAt: state[key],
+    duration: state[key] - startedAt
+  };
   updateGravity(now);
 }
 
@@ -563,6 +585,42 @@ function updateActiveSkills(now = performance.now()) {
   updateGravity(now);
   updateMagnetMerge(now);
   updateMergeSense(now);
+  renderActiveSkillBars(now);
+}
+
+function timedSkillDefs() {
+  return SKILL_POOL.filter((skill) => skill.timerKey);
+}
+
+function renderActiveSkillBars(now = performance.now()) {
+  const activeSkills = timedSkillDefs()
+    .map((skill) => {
+      const expiresAt = state[skill.timerKey] || 0;
+      const timer = state.activeSkillTimers[skill.timerKey] || {};
+      const duration = timer.duration || skill.duration || TEMP_SKILL_DURATION;
+      return {
+        ...skill,
+        expiresAt,
+        duration,
+        remaining: expiresAt - now
+      };
+    })
+    .filter((skill) => skill.remaining > 0);
+
+  activeSkillBarsEl.hidden = activeSkills.length === 0;
+  activeSkillBarsEl.replaceChildren();
+
+  activeSkills.forEach((skill) => {
+    const item = document.createElement('div');
+    item.className = `active-skill-bar rarity-${skill.rarity || 'white'}`;
+    const progress = clamp(skill.remaining / skill.duration, 0, 1);
+    item.innerHTML = `
+      <span>${escapeHtml(skill.name)}</span>
+      <b>${Math.ceil(skill.remaining / 1000)}s</b>
+      <i style="width: ${progress * 100}%"></i>
+    `;
+    activeSkillBarsEl.appendChild(item);
+  });
 }
 
 function isPrecisionAimActive(now = performance.now()) {
@@ -828,6 +886,7 @@ function resetSkillState() {
   state.skillRefreshAdBusy = false;
   state.currentSkillChoiceIds = [];
   state.skillChoicesUnlockAt = 0;
+  state.activeSkillTimers = {};
   state.selectedSkills = [];
   state.comboScoreBonus = 0;
   state.dropSpeedBonus = 0;
@@ -845,6 +904,8 @@ function resetSkillState() {
   state.comboInsuranceCharges = 0;
   blastEffects.length = 0;
   fertilizerEffects.length = 0;
+  activeSkillBarsEl.hidden = true;
+  activeSkillBarsEl.replaceChildren();
   skillPanel.hidden = true;
   skillCardsEl.replaceChildren();
   updateRefreshSkillButton();
