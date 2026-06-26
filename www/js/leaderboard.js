@@ -196,7 +196,7 @@ async function applySupabaseUser(user) {
     leaderboardState.playerId = '';
     leaderboardState.playerName = '';
     accountStatusEl.textContent = 'Connecting to Supabase...';
-    googleSignInButton.textContent = 'Google sign in';
+    googleSignInButton.textContent = 'Google 登入';
     googleSignInButton.disabled = false;
     return;
   }
@@ -209,7 +209,7 @@ async function applySupabaseUser(user) {
   accountStatusEl.textContent = user.is_anonymous
     ? `Loading guest: ${leaderboardState.playerName}`
     : `Loading ${leaderboardState.playerName}`;
-  googleSignInButton.textContent = user.is_anonymous ? 'Google sign in' : 'Sign out';
+  googleSignInButton.textContent = user.is_anonymous ? 'Google 登入' : '登出';
   googleSignInButton.disabled = true;
 
   try {
@@ -237,11 +237,29 @@ async function applySupabaseUser(user) {
 }
 
 function getSupabaseDisplayName(user) {
-  return user.email
-    || user.user_metadata?.preferred_username
-    || user.user_metadata?.full_name
-    || user.user_metadata?.name
-    || 'Signed in player';
+  const metadata = user.user_metadata || {};
+  const identityData = (user.identities || [])
+    .map((identity) => identity.identity_data || {})
+    .find((data) => data.provider === 'google' || data.iss?.includes('accounts.google.com'))
+    || {};
+  const candidates = [
+    metadata.name,
+    metadata.full_name,
+    metadata.preferred_username,
+    identityData.name,
+    identityData.full_name,
+    identityData.preferred_username
+  ];
+  return candidates.find(isDisplayName) || getEmailLocalPart(user.email) || '已登入玩家';
+}
+
+function isDisplayName(value) {
+  return typeof value === 'string' && value.trim() && !value.includes('@');
+}
+
+function getEmailLocalPart(email) {
+  if (typeof email !== 'string' || !email.includes('@')) return '';
+  return email.split('@')[0] || '';
 }
 function authRedirectUrl() {
   const url = new URL(window.location.href);
@@ -265,7 +283,7 @@ async function signInWithGoogle() {
       return;
     }
     await restoreGuestSessionOrCreateNew();
-    leaderboardMessageEl.textContent = 'Signed out. Guest session is ready.';
+    leaderboardMessageEl.textContent = '已登出，訪客遊戲資料已準備完成。';
     return;
   }
 
