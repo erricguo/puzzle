@@ -22,14 +22,12 @@ function normalizeEncyclopediaLevels(levels) {
 
 function setEncyclopediaLevels(levels) {
   state.encyclopediaUnlockedLevels = normalizeEncyclopediaLevels(levels);
-  localStorage.setItem(ENCYCLOPEDIA_STORAGE_KEY, JSON.stringify(state.encyclopediaUnlockedLevels));
   if (encyclopediaScene && !encyclopediaScene.hidden) {
     renderEncyclopedia();
   }
 }
 
 function saveEncyclopediaLevels() {
-  localStorage.setItem(ENCYCLOPEDIA_STORAGE_KEY, JSON.stringify(state.encyclopediaUnlockedLevels));
   persistEncyclopediaToSupabase().catch((error) => {
     console.warn('Encyclopedia Supabase save failed', error);
   });
@@ -52,7 +50,7 @@ async function persistEncyclopediaToSupabase(levels = state.encyclopediaUnlocked
   return true;
 }
 
-async function syncEncyclopediaForCurrentUser() {
+async function syncEncyclopediaForCurrentUser(syncToken = leaderboardState.identitySyncToken) {
   const client = leaderboardState.client;
   const user = leaderboardState.user;
   if (!client || !user) {
@@ -62,22 +60,24 @@ async function syncEncyclopediaForCurrentUser() {
     return;
   }
 
-  const localLevels = normalizeEncyclopediaLevels(state.encyclopediaUnlockedLevels);
   const { data, error } = await client
     .from(ENCYCLOPEDIA_TABLE)
     .select('level')
     .eq('user_id', user.id)
     .order('level', { ascending: true });
 
+  if (syncToken !== leaderboardState.identitySyncToken || leaderboardState.user?.id !== user.id) return false;
+
   if (error) {
     console.warn('Encyclopedia Supabase load failed', error);
-    return;
+    return false;
   }
 
   const remoteLevels = normalizeEncyclopediaLevels((data || []).map((row) => row.level));
-  const mergedLevels = normalizeEncyclopediaLevels([...localLevels, ...remoteLevels]);
-  setEncyclopediaLevels(mergedLevels);
-  await persistEncyclopediaToSupabase(mergedLevels);
+  setEncyclopediaLevels(remoteLevels);
+  if (syncToken !== leaderboardState.identitySyncToken || leaderboardState.user?.id !== user.id) return false;
+  await persistEncyclopediaToSupabase(remoteLevels);
+  return true;
 }
 
 function unlockEncyclopediaLevel(level) {

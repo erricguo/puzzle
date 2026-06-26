@@ -90,9 +90,6 @@ function updateAudioVolume() {
   soundButton.classList.toggle('muted', !audioState.enabled);
   updateSliderFill(musicVolumeSlider);
   updateSliderFill(sfxVolumeSlider);
-  localStorage.setItem('veggieMergeSoundEnabled', String(audioState.enabled));
-  localStorage.setItem('veggieMergeMusicVolume', String(audioState.musicVolume));
-  localStorage.setItem('veggieMergeSfxVolume', String(audioState.sfxVolume));
   queuePlayerProgressSync?.();
 }
 
@@ -108,7 +105,6 @@ function updateHapticsUi() {
   vibrationToggle.classList.toggle('active', hapticsState.enabled);
   vibrationToggle.setAttribute('aria-checked', String(hapticsState.enabled));
   vibrationToggle.setAttribute('aria-label', hapticsState.enabled ? '關閉震動效果' : '開啟震動效果');
-  localStorage.setItem('veggieMergeHapticsEnabled', String(hapticsState.enabled));
   queuePlayerProgressSync?.();
 }
 

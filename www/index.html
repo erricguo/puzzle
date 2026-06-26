@@ -125,8 +125,8 @@
         <span>排行榜</span>
       </div>
       <div class="account-row start-account">
-        <span id="accountStatus">尚未登入，排行榜將使用本機資料。</span>
-        <button id="googleSignInButton" type="button">Google 登入</button>
+        <span id="accountStatus">Connecting to Supabase...</span>
+        <button id="googleSignInButton" type="button">Google sign in</button>
       </div>
       <div class="start-actions">
         <button id="startButton" class="start-button" type="button">開始遊戲</button>
@@ -219,6 +219,56 @@
   </main>
 
   <script>
+    (() => {
+      const legacyLocalStorageKeys = [
+        'veggieMergeBombs',
+        'veggieMergeCoins',
+        'veggieMergeDailyMissions',
+        'veggieMergeEncyclopediaLevels',
+        'veggieMergeGuestPlayerId',
+        'veggieMergeGuestPlayerName',
+        'veggieMergeHapticsEnabled',
+        'veggieMergeLocalLeaderboard',
+        'veggieMergeMusicVolume',
+        'veggieMergeOwnedTalents',
+        'veggieMergePlayerId',
+        'veggieMergePlayerName',
+        'veggieMergeReviveTickets',
+        'veggieMergeSfxVolume',
+        'veggieMergeSoundEnabled',
+        'veggieMergeVolume'
+      ];
+      try {
+        const legacyKeySet = new Set(legacyLocalStorageKeys);
+        const clearLegacyLocalStorage = () => {
+          legacyKeySet.forEach((key) => localStorage.removeItem(key));
+        };
+        const originalSetItem = Storage.prototype.setItem;
+        const originalRemoveItem = Storage.prototype.removeItem;
+        const originalClear = Storage.prototype.clear;
+
+        Storage.prototype.setItem = function guardedSetItem(key, value) {
+          if (this === localStorage && legacyKeySet.has(String(key))) return;
+          return originalSetItem.call(this, key, value);
+        };
+        Storage.prototype.removeItem = function guardedRemoveItem(key) {
+          return originalRemoveItem.call(this, key);
+        };
+        Storage.prototype.clear = function guardedClear() {
+          return originalClear.call(this);
+        };
+
+        clearLegacyLocalStorage();
+        [0, 100, 500, 1500, 5000].forEach((delay) => {
+          window.setTimeout(clearLegacyLocalStorage, delay);
+        });
+        window.addEventListener('pageshow', clearLegacyLocalStorage);
+        document.addEventListener('visibilitychange', clearLegacyLocalStorage);
+      } catch {
+        // The app can continue; Supabase remains the source of truth.
+      }
+    })();
+
     window.SUPABASE_CONFIG = window.SUPABASE_CONFIG || {
       url: 'https://eebwaztfebmqnuarcysh.supabase.co',
       anonKey: 'sb_publishable_XqjQcP1ct0RQywqQJJ-brw_oPRXTZC-'
@@ -227,22 +277,22 @@
   <script src="capacitor.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
-  <script src="js/dom.js"></script>
-  <script src="js/utils.js"></script>
-  <script src="js/state.js"></script>
-  <script src="js/environment-events.js"></script>
-  <script src="js/daily-missions.js"></script>
-  <script src="js/talents.js"></script>
-  <script src="js/player-progress.js"></script>
-  <script src="js/leaderboard.js"></script>
-  <script src="js/encyclopedia.js"></script>
-  <script src="js/ads.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/hud-combo.js"></script>
-  <script src="js/skills.js"></script>
-  <script src="js/gameplay.js"></script>
-  <script src="js/rendering.js"></script>
-  <script src="js/events.js"></script>
+  <script src="js/config.js?v=supabase-only-20260626b"></script>
+  <script src="js/dom.js?v=supabase-only-20260626b"></script>
+  <script src="js/utils.js?v=supabase-only-20260626b"></script>
+  <script src="js/state.js?v=supabase-only-20260626b"></script>
+  <script src="js/environment-events.js?v=supabase-only-20260626b"></script>
+  <script src="js/daily-missions.js?v=supabase-only-20260626b"></script>
+  <script src="js/talents.js?v=supabase-only-20260626b"></script>
+  <script src="js/player-progress.js?v=supabase-only-20260626b"></script>
+  <script src="js/leaderboard.js?v=supabase-only-20260626b"></script>
+  <script src="js/encyclopedia.js?v=supabase-only-20260626b"></script>
+  <script src="js/ads.js?v=supabase-only-20260626b"></script>
+  <script src="js/audio.js?v=supabase-only-20260626b"></script>
+  <script src="js/hud-combo.js?v=supabase-only-20260626b"></script>
+  <script src="js/skills.js?v=supabase-only-20260626b"></script>
+  <script src="js/gameplay.js?v=supabase-only-20260626b"></script>
+  <script src="js/rendering.js?v=supabase-only-20260626b"></script>
+  <script src="js/events.js?v=supabase-only-20260626b"></script>
 </body>
 </html>

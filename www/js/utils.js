@@ -22,60 +22,36 @@ function createPlayerId() {
   return `guest-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function createGuestDisplayName() {
+  return `Guest ${Math.floor(Math.random() * 9000 + 1000)}`;
+}
+
 function loadLocalLeaderboard() {
-  try {
-    return JSON.parse(localStorage.getItem('veggieMergeLocalLeaderboard') || '[]');
-  } catch {
-    return [];
-  }
+  return [];
 }
 
 function loadEncyclopediaLevels() {
-  try {
-    const stored = JSON.parse(localStorage.getItem('veggieMergeEncyclopediaLevels') || '[0]');
-    const levels = Array.isArray(stored) ? stored : [0];
-    const validLevels = levels
-      .map((level) => Number(level))
-      .filter((level) => Number.isInteger(level) && level >= 0 && level < VEGETABLES.length);
-    return [...new Set([0, ...validLevels])].sort((a, b) => a - b);
-  } catch {
-    return [0];
-  }
+  return [0];
 }
 
 function loadDailyMissionState() {
-  try {
-    const stored = JSON.parse(localStorage.getItem('veggieMergeDailyMissions') || '{}');
-    return stored && typeof stored === 'object' ? stored : {};
-  } catch {
-    return {};
-  }
+  return {};
 }
 
 function loadPlayerCoins() {
-  const coins = Number(localStorage.getItem('veggieMergeCoins') || 0);
-  return Number.isFinite(coins) && coins > 0 ? Math.floor(coins) : 0;
+  return 0;
 }
 
 function loadReviveTickets() {
-  const stored = localStorage.getItem('veggieMergeReviveTickets');
-  if (stored === null) return STARTING_REVIVE_TICKETS;
-  const tickets = Number(stored);
-  return Number.isFinite(tickets) && tickets > 0 ? Math.floor(tickets) : 0;
+  return STARTING_REVIVE_TICKETS;
 }
 
 function loadBombs() {
-  const bombs = Number(localStorage.getItem('veggieMergeBombs') || 0);
-  return Number.isFinite(bombs) && bombs > 0 ? Math.floor(bombs) : 0;
+  return 0;
 }
 
 function loadOwnedTalents() {
-  try {
-    const stored = JSON.parse(localStorage.getItem('veggieMergeOwnedTalents') || '[]');
-    return Array.isArray(stored) ? stored.filter((id) => typeof id === 'string') : [];
-  } catch {
-    return [];
-  }
+  return [];
 }
 
 function formatDate(value) {

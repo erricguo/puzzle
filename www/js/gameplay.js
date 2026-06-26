@@ -321,6 +321,11 @@ function resetGame() {
 }
 
 function startGame() {
+  if (!leaderboardState.isIdentityReady || !leaderboardState.user) {
+    accountStatusEl.textContent = 'Connecting to Supabase...';
+    syncSupabaseUser?.();
+    return;
+  }
   ensureAudio();
   startMusic();
   playClickSound();
@@ -390,12 +395,10 @@ async function playAgainFromGameOver() {
 }
 
 function saveReviveTickets() {
-  localStorage.setItem('veggieMergeReviveTickets', String(state.reviveTickets));
   queuePlayerProgressSync?.();
 }
 
 function saveBombs() {
-  localStorage.setItem('veggieMergeBombs', String(state.bombs));
   queuePlayerProgressSync?.();
 }
 

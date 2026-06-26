@@ -95,12 +95,12 @@ const audioState = {
   musicLoading: null,
   comboNoiseBuffer: null,
   comboNoiseSampleRate: 0,
-  enabled: localStorage.getItem('veggieMergeSoundEnabled') !== 'false',
-  musicVolume: Number(localStorage.getItem('veggieMergeMusicVolume') || localStorage.getItem('veggieMergeVolume') || 0.7),
-  sfxVolume: Number(localStorage.getItem('veggieMergeSfxVolume') || 0.85)
+  enabled: true,
+  musicVolume: 0.7,
+  sfxVolume: 0.85
 };
 const hapticsState = {
-  enabled: localStorage.getItem('veggieMergeHapticsEnabled') !== 'false'
+  enabled: true
 };
 const leaderboardState = {
   activeTab: 'classic',
@@ -114,23 +114,18 @@ const leaderboardState = {
   authSubscription: null,
   user: null,
   isAuthBusy: false,
+  isIdentityReady: false,
+  identitySyncToken: 0,
+  guestSessionSnapshot: null,
   recentScoreRow: null,
   recentScoreRank: null,
-  guestPlayerId: localStorage.getItem('veggieMergeGuestPlayerId')
-    || localStorage.getItem('veggieMergePlayerId')
-    || createPlayerId(),
-  guestPlayerName: localStorage.getItem('veggieMergeGuestPlayerName')
-    || localStorage.getItem('veggieMergePlayerName')
-    || `玩家 ${Math.floor(Math.random() * 9000 + 1000)}`,
+  guestPlayerId: createPlayerId(),
+  guestPlayerName: createGuestDisplayName(),
   playerId: '',
   playerName: ''
 };
 leaderboardState.playerId = leaderboardState.guestPlayerId;
 leaderboardState.playerName = leaderboardState.guestPlayerName;
-localStorage.setItem('veggieMergeGuestPlayerId', leaderboardState.guestPlayerId);
-localStorage.setItem('veggieMergeGuestPlayerName', leaderboardState.guestPlayerName);
-localStorage.setItem('veggieMergePlayerId', leaderboardState.playerId);
-localStorage.setItem('veggieMergePlayerName', leaderboardState.playerName);
 
 const walls = {
   floor: null,

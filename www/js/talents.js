@@ -1,4 +1,3 @@
-const TALENT_STORAGE_KEY = 'veggieMergeOwnedTalents';
 let activeShopTab = 'talent';
 
 const TALENT_DEFS = [
@@ -87,7 +86,6 @@ const ITEM_SHOP_DEFS = [
 ];
 
 function saveOwnedTalents() {
-  localStorage.setItem(TALENT_STORAGE_KEY, JSON.stringify(state.ownedTalents));
   queuePlayerProgressSync?.();
 }
 

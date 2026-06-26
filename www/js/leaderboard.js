@@ -1,4 +1,23 @@
 const LEADERBOARD_LIMIT = 1000;
+const GUEST_SESSION_STORAGE_KEY = 'veggieMergeGuestSession';
+const LEGACY_LOCAL_STORAGE_KEYS = [
+  'veggieMergeBombs',
+  'veggieMergeCoins',
+  'veggieMergeDailyMissions',
+  'veggieMergeEncyclopediaLevels',
+  'veggieMergeGuestPlayerId',
+  'veggieMergeGuestPlayerName',
+  'veggieMergeHapticsEnabled',
+  'veggieMergeLocalLeaderboard',
+  'veggieMergeMusicVolume',
+  'veggieMergeOwnedTalents',
+  'veggieMergePlayerId',
+  'veggieMergePlayerName',
+  'veggieMergeReviveTickets',
+  'veggieMergeSfxVolume',
+  'veggieMergeSoundEnabled',
+  'veggieMergeVolume'
+];
 
 function saveLocalLeaderboard() {
   const sorted = [...leaderboardState.localRows]
@@ -6,8 +25,6 @@ function saveLocalLeaderboard() {
     .sort((a, b) => b.score - a.score || b.best_combo - a.best_combo || a.created_at.localeCompare(b.created_at))
     .slice(0, LEADERBOARD_LIMIT);
   leaderboardState.localRows = sorted;
-  localStorage.setItem('veggieMergeLocalLeaderboard', JSON.stringify(sorted));
-  queuePlayerProgressSync?.();
 }
 
 function normalizeLeaderboardRow(row) {
@@ -25,13 +42,59 @@ function currentBoardType() {
   return leaderboardState.activeTab === 'item' ? 'item' : 'classic';
 }
 
+function clearLegacyLocalGameData() {
+  LEGACY_LOCAL_STORAGE_KEYS.forEach((key) => {
+    localStorage.removeItem(key);
+  });
+}
+
+function loadGuestSessionSnapshot() {
+  try {
+    const snapshot = JSON.parse(localStorage.getItem(GUEST_SESSION_STORAGE_KEY) || 'null');
+    if (snapshot?.access_token && snapshot?.refresh_token) return snapshot;
+  } catch {
+    // Ignore malformed auth snapshots.
+  }
+  return null;
+}
+
+function saveGuestSessionSnapshot(session) {
+  if (!session?.access_token || !session?.refresh_token) return;
+  leaderboardState.guestSessionSnapshot = {
+    access_token: session.access_token,
+    refresh_token: session.refresh_token
+  };
+  localStorage.setItem(GUEST_SESSION_STORAGE_KEY, JSON.stringify(leaderboardState.guestSessionSnapshot));
+}
+
+function clearGuestSessionSnapshot() {
+  leaderboardState.guestSessionSnapshot = null;
+  localStorage.removeItem(GUEST_SESSION_STORAGE_KEY);
+}
+
+function setSupabaseGateReady(ready) {
+  leaderboardState.isIdentityReady = ready;
+  [
+    startButton,
+    startDailyButton,
+    startTalentButton,
+    startEncyclopediaButton,
+    startLeaderboardButton
+  ].forEach((button) => {
+    if (button) button.disabled = !ready;
+  });
+}
+
 function setupSupabase() {
+  clearLegacyLocalGameData();
   const config = window.SUPABASE_CONFIG || {};
   const canCreateClient = Boolean(window.supabase?.createClient);
   leaderboardState.isConfigured = Boolean(config.url && config.anonKey && canCreateClient);
+  leaderboardState.guestSessionSnapshot = loadGuestSessionSnapshot();
+  setSupabaseGateReady(false);
 
   if (!leaderboardState.isConfigured) {
-    accountStatusEl.textContent = 'Supabase 尚未設定，排行榜暫用本機資料';
+    accountStatusEl.textContent = 'Supabase is required. Please check configuration.';
     googleSignInButton.hidden = true;
     return;
   }
@@ -43,11 +106,13 @@ function setupSupabase() {
       detectSessionInUrl: true
     }
   });
-  accountStatusEl.textContent = `訪客: ${leaderboardState.playerName}`;
+  accountStatusEl.textContent = 'Connecting to Supabase...';
   googleSignInButton.disabled = true;
 
   leaderboardState.authSubscription = leaderboardState.client.auth.onAuthStateChange((_event, session) => {
-    applySupabaseUser(session?.user || null);
+    applySupabaseUser(session?.user || null).catch((error) => {
+      console.warn('Supabase user apply failed', error);
+    });
     if (leaderboardScene && !leaderboardScene.hidden) {
       loadLeaderboard();
     }
@@ -59,59 +124,125 @@ function setupSupabase() {
 async function syncSupabaseUser() {
   if (!leaderboardState.client) return;
 
-  const { data, error } = await leaderboardState.client.auth.getUser();
-  if (error) {
-    applySupabaseUser(null);
-    leaderboardMessageEl.textContent = `登入狀態讀取失敗: ${error.message}`;
+  const { data: sessionData, error: sessionError } = await leaderboardState.client.auth.getSession();
+  if (sessionError) {
+    setSupabaseGateReady(false);
+    leaderboardMessageEl.textContent = `Supabase session failed: ${sessionError.message}`;
     return;
   }
 
-  applySupabaseUser(data?.user || null);
+  if (sessionData?.session?.user) {
+    if (sessionData.session.user.is_anonymous && sessionData.session.access_token && sessionData.session.refresh_token) {
+      saveGuestSessionSnapshot(sessionData.session);
+    }
+    await applySupabaseUser(sessionData.session.user);
+    return;
+  }
+
+  const { data, error } = await leaderboardState.client.auth.signInAnonymously();
+  if (error) {
+    setSupabaseGateReady(false);
+    accountStatusEl.textContent = `Anonymous sign-in failed: ${error.message}`;
+    leaderboardMessageEl.textContent = 'Supabase anonymous auth must be enabled.';
+    googleSignInButton.disabled = false;
+    return;
+  }
+
+  if (data?.session?.access_token && data?.session?.refresh_token) {
+    saveGuestSessionSnapshot(data.session);
+  }
+  await applySupabaseUser(data?.user || null);
 }
 
-function applySupabaseUser(user) {
+async function restoreGuestSessionOrCreateNew() {
+  if (!leaderboardState.client) return false;
+
+  const snapshot = leaderboardState.guestSessionSnapshot;
+  if (snapshot?.access_token && snapshot?.refresh_token) {
+    const { data, error } = await leaderboardState.client.auth.setSession({
+      access_token: snapshot.access_token,
+      refresh_token: snapshot.refresh_token
+    });
+    if (!error && data?.session?.user?.is_anonymous) {
+      await applySupabaseUser(data.session.user);
+      return true;
+    }
+    console.warn('Guest session restore failed', error);
+    clearGuestSessionSnapshot();
+  }
+
+  const { data, error } = await leaderboardState.client.auth.signInAnonymously();
+  if (error) {
+    setSupabaseGateReady(false);
+    accountStatusEl.textContent = `Anonymous sign-in failed: ${error.message}`;
+    leaderboardMessageEl.textContent = 'Supabase anonymous auth must be enabled.';
+    googleSignInButton.disabled = false;
+    return false;
+  }
+
+  if (data?.session?.access_token && data?.session?.refresh_token) {
+    saveGuestSessionSnapshot(data.session);
+  }
+  await applySupabaseUser(data?.user || null);
+  return true;
+}
+
+async function applySupabaseUser(user) {
+  const syncToken = ++leaderboardState.identitySyncToken;
   leaderboardState.user = user;
+  setSupabaseGateReady(false);
 
   if (!user) {
-    leaderboardState.playerId = leaderboardState.guestPlayerId;
-    leaderboardState.playerName = leaderboardState.guestPlayerName;
-    localStorage.setItem('veggieMergePlayerId', leaderboardState.playerId);
-    localStorage.setItem('veggieMergePlayerName', leaderboardState.playerName);
-    accountStatusEl.textContent = `訪客: ${leaderboardState.playerName}`;
-    googleSignInButton.textContent = 'Google 登入';
+    leaderboardState.playerId = '';
+    leaderboardState.playerName = '';
+    accountStatusEl.textContent = 'Connecting to Supabase...';
+    googleSignInButton.textContent = 'Google sign in';
     googleSignInButton.disabled = false;
-    if (typeof syncEncyclopediaForCurrentUser === 'function') {
-      syncEncyclopediaForCurrentUser();
-    }
-    if (typeof syncPlayerProgressForCurrentUser === 'function') {
-      syncPlayerProgressForCurrentUser();
-    }
     return;
   }
 
   leaderboardState.playerId = user.id;
-  leaderboardState.playerName = getSupabaseDisplayName(user);
-  localStorage.setItem('veggieMergePlayerId', leaderboardState.playerId);
-  localStorage.setItem('veggieMergePlayerName', leaderboardState.playerName);
-  accountStatusEl.textContent = leaderboardState.playerName;
-  googleSignInButton.textContent = '登出';
+  leaderboardState.playerName = user.is_anonymous ? leaderboardState.guestPlayerName : getSupabaseDisplayName(user);
+  if (user.is_anonymous) {
+    leaderboardState.guestPlayerId = user.id;
+  }
+  accountStatusEl.textContent = user.is_anonymous
+    ? `Loading guest: ${leaderboardState.playerName}`
+    : `Loading ${leaderboardState.playerName}`;
+  googleSignInButton.textContent = user.is_anonymous ? 'Google sign in' : 'Sign out';
+  googleSignInButton.disabled = true;
+
+  try {
+    resetProgressForIdentityLoad();
+    if (typeof syncEncyclopediaForCurrentUser === 'function') {
+      await syncEncyclopediaForCurrentUser(syncToken);
+    }
+    if (typeof syncPlayerProgressForCurrentUser === 'function') {
+      await syncPlayerProgressForCurrentUser(syncToken);
+    }
+  } catch (error) {
+    console.warn('Supabase progress load failed', error);
+    if (syncToken === leaderboardState.identitySyncToken && leaderboardState.user?.id === user.id) {
+      accountStatusEl.textContent = `Supabase load failed: ${error.message}`;
+      googleSignInButton.disabled = false;
+      setSupabaseGateReady(false);
+    }
+    return;
+  }
+
+  if (syncToken !== leaderboardState.identitySyncToken || leaderboardState.user?.id !== user.id) return;
+  accountStatusEl.textContent = user.is_anonymous ? `Guest: ${leaderboardState.playerName}` : leaderboardState.playerName;
   googleSignInButton.disabled = false;
-  if (typeof syncEncyclopediaForCurrentUser === 'function') {
-    syncEncyclopediaForCurrentUser();
-  }
-  if (typeof syncPlayerProgressForCurrentUser === 'function') {
-    syncPlayerProgressForCurrentUser();
-  }
+  setSupabaseGateReady(true);
 }
 
 function getSupabaseDisplayName(user) {
-  return user.user_metadata?.full_name
-    || user.user_metadata?.name
+  return user.email
     || user.user_metadata?.preferred_username
-    || user.email
-    || '登入玩家';
+    || user.user_metadata?.full_name
+    || user.user_metadata?.name
+    || 'Signed in player';
 }
-
 function authRedirectUrl() {
   const url = new URL(window.location.href);
   url.hash = '';
@@ -125,7 +256,7 @@ async function signInWithGoogle() {
   googleSignInButton.disabled = true;
   leaderboardState.isAuthBusy = true;
 
-  if (leaderboardState.user) {
+  if (leaderboardState.user && !leaderboardState.user.is_anonymous) {
     const { error } = await leaderboardState.client.auth.signOut();
     leaderboardState.isAuthBusy = false;
     if (error) {
@@ -133,12 +264,33 @@ async function signInWithGoogle() {
       leaderboardMessageEl.textContent = `登出失敗: ${error.message}`;
       return;
     }
-    applySupabaseUser(null);
-    leaderboardMessageEl.textContent = '已登出 Google 帳號';
+    await restoreGuestSessionOrCreateNew();
+    leaderboardMessageEl.textContent = 'Signed out. Guest session is ready.';
     return;
   }
 
   leaderboardMessageEl.textContent = '正在前往 Google 登入...';
+  if (leaderboardState.user?.is_anonymous) {
+    try {
+      await persistPlayerProgressToSupabase?.();
+      const { data: guestSessionData } = await leaderboardState.client.auth.getSession();
+      const guestSession = guestSessionData?.session;
+      if (guestSession?.user?.is_anonymous && guestSession.access_token && guestSession.refresh_token) {
+        saveGuestSessionSnapshot(guestSession);
+      }
+    } catch (error) {
+      console.warn('Guest progress save before Google sign-in failed', error);
+    }
+
+    const { error: signOutError } = await leaderboardState.client.auth.signOut();
+    if (signOutError) {
+      leaderboardState.isAuthBusy = false;
+      googleSignInButton.disabled = false;
+      leaderboardMessageEl.textContent = `Guest sign-out failed: ${signOutError.message}`;
+      return;
+    }
+  }
+
   const { error } = await leaderboardState.client.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -159,6 +311,10 @@ async function signInWithGoogle() {
 async function submitLeaderboardScore() {
   if (state.scoreSaved) return leaderboardState.recentScoreRow;
   if (state.score <= 0 || state.bestCombo <= 0) return null;
+  if (!leaderboardState.client || !leaderboardState.user) {
+    leaderboardMessageEl.textContent = 'Supabase is not ready. Score was not submitted.';
+    return null;
+  }
   state.scoreSaved = true;
 
   const row = {
@@ -171,13 +327,6 @@ async function submitLeaderboardScore() {
     board_type: state.itemBoardRun ? 'item' : 'classic',
     created_at: new Date().toISOString()
   };
-
-  leaderboardState.localRows.push(row);
-  saveLocalLeaderboard();
-  leaderboardState.recentScoreRow = row;
-  leaderboardState.recentScoreRank = await calculateScoreRank(row);
-
-  if (!leaderboardState.client) return row;
 
   const { data, error } = await leaderboardState.client
     .from('vegetable_merge_scores')
@@ -195,72 +344,25 @@ async function submitLeaderboardScore() {
   if (!error && data) {
     Object.assign(row, data);
     Object.assign(row, normalizeLeaderboardRow(row));
+    leaderboardState.localRows.push(row);
     leaderboardState.recentScoreRow = row;
     leaderboardState.recentScoreRank = await calculateScoreRank(row);
     saveLocalLeaderboard();
   }
 
   if (error) {
-    leaderboardMessageEl.textContent = `送出失敗，已保存在本機: ${error.message}`;
+    leaderboardMessageEl.textContent = `送出失敗: ${error.message}`;
+    state.scoreSaved = false;
+    return null;
   }
   return row;
-}
-
-async function syncPendingLocalLeaderboardRows() {
-  const client = leaderboardState.client;
-  if (!client) return false;
-
-  const pendingRows = leaderboardState.localRows
-    .map(normalizeLeaderboardRow)
-    .filter((row) => !row.id && row.score > 0 && row.best_combo > 0);
-  if (!pendingRows.length) return true;
-
-  let changed = false;
-  for (const row of pendingRows) {
-    const { data, error } = await client
-      .from('vegetable_merge_scores')
-      .insert({
-        player_id: leaderboardState.playerId || row.player_id,
-        player_name: row.player_name || leaderboardState.playerName,
-        score: row.score,
-        best_combo: row.best_combo,
-        best_level: row.best_level,
-        board_type: row.board_type
-      })
-      .select('id, player_name, score, best_combo, best_level, board_type, created_at')
-      .single();
-
-    if (error || !data) {
-      console.warn('Pending leaderboard sync failed', error);
-      continue;
-    }
-
-    Object.assign(row, normalizeLeaderboardRow(data));
-    const index = leaderboardState.localRows.findIndex((item) => isRecentScoreRow(item, row));
-    if (index >= 0) {
-      leaderboardState.localRows[index] = row;
-      changed = true;
-    }
-  }
-
-  if (changed) {
-    saveLocalLeaderboard();
-  }
-  return true;
 }
 
 async function calculateScoreRank(row) {
   if (!row || row.score <= 0 || row.best_combo <= 0) return null;
   const boardType = normalizeLeaderboardRow(row).board_type;
 
-  if (!leaderboardState.client) {
-    const sorted = [...leaderboardState.localRows]
-      .map(normalizeLeaderboardRow)
-      .filter((item) => item.best_combo > 0 && item.board_type === boardType)
-      .sort((a, b) => b.score - a.score || b.best_combo - a.best_combo || a.created_at.localeCompare(b.created_at));
-    const index = sorted.findIndex((item) => isRecentScoreRow(item, row));
-    return index >= 0 ? index + 1 : null;
-  }
+  if (!leaderboardState.client) return null;
 
   const { count, error } = await leaderboardState.client
     .from('vegetable_merge_scores')
@@ -294,12 +396,8 @@ async function loadLeaderboard() {
   leaderboardMessageEl.textContent = '載入中...';
 
   if (!leaderboardState.client) {
-    const rows = [...leaderboardState.localRows]
-      .map(normalizeLeaderboardRow)
-      .filter((row) => row.best_combo > 0 && row.board_type === boardType)
-      .sort((a, b) => b.score - a.score || b.best_combo - a.best_combo || a.created_at.localeCompare(b.created_at))
-      .slice(0, LEADERBOARD_LIMIT);
-    leaderboardState.rows[leaderboardState.activeTab] = rows;
+    leaderboardMessageEl.textContent = 'Supabase is required for leaderboard.';
+    leaderboardState.rows[leaderboardState.activeTab] = [];
     renderLeaderboard();
     return;
   }

@@ -47,34 +47,6 @@ function normalizeDailyMissionPayload(payload) {
   };
 }
 
-function mergeDailyMissionPayloads(localPayload, remotePayload) {
-  const local = normalizeDailyMissionPayload(localPayload);
-  const remote = normalizeDailyMissionPayload(remotePayload);
-  if (!remote.date) return local;
-  if (!local.date) return remote;
-  if (remote.date > local.date) return remote;
-  if (local.date > remote.date) return local;
-
-  const missionMap = new Map();
-  [...local.missions, ...remote.missions].forEach((mission) => {
-    const existing = missionMap.get(mission.id);
-    missionMap.set(mission.id, existing
-      ? {
-        id: mission.id,
-        progress: Math.max(existing.progress, mission.progress),
-        completed: existing.completed || mission.completed,
-        rewardClaimed: existing.rewardClaimed || mission.rewardClaimed
-      }
-      : mission);
-  });
-
-  return {
-    date: local.date,
-    adRefreshUsed: local.adRefreshUsed || remote.adRefreshUsed,
-    missions: [...missionMap.values()]
-  };
-}
-
 function normalizeLeaderboardRows(rows) {
   return (Array.isArray(rows) ? rows : [])
     .map(normalizeLeaderboardRow)
@@ -82,36 +54,36 @@ function normalizeLeaderboardRows(rows) {
     .slice(0, LEADERBOARD_LIMIT);
 }
 
-function mergeLeaderboardRows(localRows, remoteRows) {
-  const rowMap = new Map();
-  [...normalizeLeaderboardRows(localRows), ...normalizeLeaderboardRows(remoteRows)].forEach((row) => {
-    const key = row.id || row.local_id || `${row.player_id}:${row.score}:${row.best_combo}:${row.board_type}:${row.created_at}`;
-    rowMap.set(key, row);
-  });
-  return [...rowMap.values()]
-    .sort((a, b) => b.score - a.score || b.best_combo - a.best_combo || a.created_at.localeCompare(b.created_at))
-    .slice(0, LEADERBOARD_LIMIT);
-}
-
-function saveLocalProgress() {
-  localStorage.setItem('veggieMergeCoins', String(state.coins));
-  localStorage.setItem('veggieMergeOwnedTalents', JSON.stringify(state.ownedTalents));
-  localStorage.setItem('veggieMergeReviveTickets', String(state.reviveTickets));
-  localStorage.setItem('veggieMergeBombs', String(state.bombs));
-  localStorage.setItem('veggieMergeDailyMissions', JSON.stringify(state.dailyMissionState));
-  localStorage.setItem('veggieMergeSoundEnabled', String(audioState.enabled));
-  localStorage.setItem('veggieMergeMusicVolume', String(audioState.musicVolume));
-  localStorage.setItem('veggieMergeSfxVolume', String(audioState.sfxVolume));
-  localStorage.setItem('veggieMergeHapticsEnabled', String(hapticsState.enabled));
-  localStorage.setItem('veggieMergeLocalLeaderboard', JSON.stringify(leaderboardState.localRows));
-  localStorage.setItem('veggieMergeGuestPlayerId', leaderboardState.guestPlayerId);
-  localStorage.setItem('veggieMergeGuestPlayerName', leaderboardState.guestPlayerName);
+function resetProgressForIdentityLoad() {
+  state.coins = 0;
+  state.ownedTalents = [];
+  state.reviveTickets = STARTING_REVIVE_TICKETS;
+  state.bombs = 0;
+  state.dailyMissionState = {};
+  state.encyclopediaUnlockedLevels = [0];
+  leaderboardState.localRows = [];
+  leaderboardState.rows.classic = [];
+  leaderboardState.rows.item = [];
+  leaderboardState.recentScoreRow = null;
+  leaderboardState.recentScoreRank = null;
+  updateCoinUi?.();
+  updateHud?.();
 }
 
 async function persistPlayerProgressToSupabase() {
   const client = leaderboardState.client;
   const user = leaderboardState.user;
   if (!client || !user) return false;
+
+  const guestIdentity = user.is_anonymous
+    ? {
+      guest_player_id: leaderboardState.guestPlayerId,
+      guest_player_name: leaderboardState.guestPlayerName
+    }
+    : {
+      guest_player_id: null,
+      guest_player_name: null
+    };
 
   const { error } = await client
     .from(PLAYER_PROGRESS_TABLE)
@@ -123,9 +95,7 @@ async function persistPlayerProgressToSupabase() {
       bombs: normalizeProgressInteger(state.bombs),
       daily_missions: normalizeDailyMissionPayload(state.dailyMissionState),
       audio_settings: currentAudioSettings(),
-      local_leaderboard: normalizeLeaderboardRows(leaderboardState.localRows),
-      guest_player_id: leaderboardState.guestPlayerId,
-      guest_player_name: leaderboardState.guestPlayerName,
+      ...guestIdentity,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' });
 
@@ -134,12 +104,13 @@ async function persistPlayerProgressToSupabase() {
 }
 
 function queuePlayerProgressSync() {
+  if (!leaderboardState.isIdentityReady) return;
   persistPlayerProgressToSupabase().catch((error) => {
     console.warn('Player progress Supabase save failed', error);
   });
 }
 
-async function syncPlayerProgressForCurrentUser() {
+async function syncPlayerProgressForCurrentUser(syncToken = leaderboardState.identitySyncToken) {
   const client = leaderboardState.client;
   const user = leaderboardState.user;
   if (!client || !user) {
@@ -150,31 +121,26 @@ async function syncPlayerProgressForCurrentUser() {
 
   const { data, error } = await client
     .from(PLAYER_PROGRESS_TABLE)
-    .select('coins, owned_talents, revive_tickets, bombs, daily_missions, audio_settings, local_leaderboard, guest_player_id, guest_player_name')
+    .select('coins, owned_talents, revive_tickets, bombs, daily_missions, audio_settings, guest_player_id, guest_player_name')
     .eq('user_id', user.id)
     .maybeSingle();
 
+  if (syncToken !== leaderboardState.identitySyncToken || leaderboardState.user?.id !== user.id) return false;
+
   if (error) {
     console.warn('Player progress Supabase load failed', error);
-    return;
+    return false;
   }
 
-  const localCoins = Math.max(0, Math.floor(state.coins));
   const remoteCoins = Math.max(0, Math.floor(Number(data?.coins || 0)));
   const remoteSettings = data?.audio_settings && typeof data.audio_settings === 'object'
     ? normalizeAudioSettings(data.audio_settings)
     : null;
-  const mergedTalents = normalizeTalentIds([
-    ...state.ownedTalents,
-    ...(Array.isArray(data?.owned_talents) ? data.owned_talents : [])
-  ]);
-
-  state.coins = Math.max(localCoins, remoteCoins);
-  state.ownedTalents = mergedTalents;
-  state.reviveTickets = Math.max(normalizeProgressInteger(state.reviveTickets), normalizeProgressInteger(data?.revive_tickets));
-  state.bombs = Math.max(normalizeProgressInteger(state.bombs), normalizeProgressInteger(data?.bombs));
-  state.dailyMissionState = mergeDailyMissionPayloads(state.dailyMissionState, data?.daily_missions);
-  leaderboardState.localRows = mergeLeaderboardRows(leaderboardState.localRows, data?.local_leaderboard);
+  state.coins = remoteCoins;
+  state.ownedTalents = normalizeTalentIds(Array.isArray(data?.owned_talents) ? data.owned_talents : []);
+  state.reviveTickets = data ? normalizeProgressInteger(data?.revive_tickets) : STARTING_REVIVE_TICKETS;
+  state.bombs = normalizeProgressInteger(data?.bombs);
+  state.dailyMissionState = normalizeDailyMissionPayload(data?.daily_missions);
   if (remoteSettings) {
     audioState.enabled = remoteSettings.soundEnabled;
     audioState.musicVolume = remoteSettings.musicVolume;
@@ -183,13 +149,14 @@ async function syncPlayerProgressForCurrentUser() {
     updateAudioVolume?.();
     updateHapticsUi?.();
   }
-  if (typeof data?.guest_player_id === 'string') {
+  if (user.is_anonymous && typeof data?.guest_player_id === 'string') {
     leaderboardState.guestPlayerId = data.guest_player_id;
   }
-  if (typeof data?.guest_player_name === 'string') {
+  if (user.is_anonymous && typeof data?.guest_player_name === 'string') {
     leaderboardState.guestPlayerName = data.guest_player_name;
+    leaderboardState.playerName = data.guest_player_name;
   }
-  saveLocalProgress();
+  normalizeDailyMissionState?.();
   updateCoinUi?.();
   updateHud?.();
   if (talentScene && !talentScene.hidden) {
@@ -201,6 +168,7 @@ async function syncPlayerProgressForCurrentUser() {
   if (leaderboardScene && !leaderboardScene.hidden) {
     loadLeaderboard();
   }
-  await syncPendingLocalLeaderboardRows();
+  if (syncToken !== leaderboardState.identitySyncToken || leaderboardState.user?.id !== user.id) return false;
   await persistPlayerProgressToSupabase();
+  return true;
 }

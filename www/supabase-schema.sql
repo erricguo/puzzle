@@ -26,6 +26,9 @@ create index if not exists vegetable_merge_scores_combo_idx
 
 alter table public.vegetable_merge_scores enable row level security;
 
+grant select on public.vegetable_merge_scores to anon, authenticated;
+grant insert on public.vegetable_merge_scores to authenticated;
+
 drop policy if exists "Anyone can read vegetable leaderboard" on public.vegetable_merge_scores;
 create policy "Anyone can read vegetable leaderboard"
   on public.vegetable_merge_scores
@@ -33,10 +36,14 @@ create policy "Anyone can read vegetable leaderboard"
   using (true);
 
 drop policy if exists "Anyone can submit vegetable scores" on public.vegetable_merge_scores;
-create policy "Anyone can submit vegetable scores"
+drop policy if exists "Players can submit vegetable scores" on public.vegetable_merge_scores;
+create policy "Players can submit vegetable scores"
   on public.vegetable_merge_scores
   for insert
+  to authenticated
   with check (
+    auth.uid()::text = player_id
+    and
     score >= 0
     and best_combo >= 0
     and best_level between 1 and 10

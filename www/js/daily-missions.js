@@ -1,4 +1,3 @@
-const DAILY_MISSION_STORAGE_KEY = 'veggieMergeDailyMissions';
 const DAILY_MISSION_COUNT = 3;
 const DAILY_MISSION_AD_REFRESH_LIMIT = 1;
 const DAILY_MISSION_DIFFICULTIES = ['easy', 'medium', 'hard'];
@@ -443,14 +442,12 @@ function normalizeDailyMissionState(stored = state.dailyMissionState) {
         };
       })
       .filter(Boolean)
-      .filter((mission) => !mission.rewardClaimed)
   };
 
   saveDailyMissionState();
 }
 
 function saveCoins() {
-  localStorage.setItem('veggieMergeCoins', String(state.coins));
   queuePlayerProgressSync?.();
 }
 
@@ -487,7 +484,6 @@ function spendCoins(amount) {
 }
 
 function saveDailyMissionState() {
-  localStorage.setItem(DAILY_MISSION_STORAGE_KEY, JSON.stringify(state.dailyMissionState));
   queuePlayerProgressSync?.();
 }
 
@@ -548,7 +544,6 @@ function claimDailyMissionReward(missionId, sourceButton = null) {
   mission.rewardClaimed = true;
   const reward = dailyMissionReward(def);
   addCoins(reward);
-  state.dailyMissionState.missions = state.dailyMissionState.missions.filter((item) => item.id !== missionId);
   saveDailyMissionState();
 
   const missionEl = sourceButton?.closest?.('.daily-mission');
@@ -576,7 +571,7 @@ function recordDailyMissionProgress(kind, amount = 1) {
 
   for (const mission of state.dailyMissionState.missions) {
     const def = dailyMissionDef(mission.id);
-    if (!def || def.kind !== kind || mission.completed) continue;
+    if (!def || def.kind !== kind || mission.completed || mission.rewardClaimed) continue;
 
     const nextProgress = def.mode === 'max'
       ? Math.max(mission.progress, amount)
