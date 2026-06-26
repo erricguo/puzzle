@@ -83,6 +83,7 @@ const state = {
 };
 
 const comboBursts = [];
+const comboInsuranceEffects = [];
 const blastEffects = [];
 const fertilizerEffects = [];
 const audioState = {

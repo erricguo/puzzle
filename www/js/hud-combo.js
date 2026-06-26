@@ -43,7 +43,7 @@ function comboScoreMultiplier(combo) {
 }
 
 function scoreWithComboBonus(baseScore, combo) {
-  const rawScore = baseScore * comboScoreMultiplier(combo) * (isGoldenTimeActive() ? 1.2 : 1);
+  const rawScore = baseScore * comboScoreMultiplier(combo) * pestComboScoreMultiplier() * (isGoldenTimeActive() ? 1.2 : 1);
   const wholeScore = Math.floor(rawScore);
   state.scoreRemainder += rawScore - wholeScore;
   const carriedScore = Math.floor(state.scoreRemainder);
@@ -66,6 +66,9 @@ function clearExpiredCombo(now = performance.now()) {
       state.comboInsuranceCharges -= 1;
       state.comboDuration = comboDurationFor(state.combo);
       state.comboExpiresAt = now + state.comboDuration;
+      state.comboPulseStartedAt = now;
+      state.comboPulseColor = '#35d7ff';
+      pushComboInsuranceEffect('triggered', now);
       return;
     }
     state.combo = 0;
@@ -94,6 +97,16 @@ function pushComboBurst(x, y, combo, now = performance.now()) {
     y,
     combo,
     color: comboColor(combo),
+    startedAt: now
+  });
+}
+
+function pushComboInsuranceEffect(kind = 'ready', now = performance.now()) {
+  if (comboInsuranceEffects.length >= 4) {
+    comboInsuranceEffects.shift();
+  }
+  comboInsuranceEffects.push({
+    kind,
     startedAt: now
   });
 }

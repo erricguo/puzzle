@@ -227,7 +227,8 @@ function drawTopUiOverlay(now) {
     comboBarEl.style.width = `${Math.min(116, state.width * 0.32)}px`;
     comboBarEl.style.setProperty('--combo-color', comboProgress > 0.32 ? accent : '#ff634f');
     comboBarEl.style.setProperty('--combo-glow', pulse > 0 ? accent : 'transparent');
-    comboTextEl.textContent = frozen ? `COMBO ${state.combo} 凍結` : `COMBO ${state.combo}`;
+    const insuranceText = state.comboInsuranceCharges > 0 ? ` 保險x${state.comboInsuranceCharges}` : '';
+    comboTextEl.textContent = frozen ? `COMBO ${state.combo} 凍結${insuranceText}` : `COMBO ${state.combo}${insuranceText}`;
     comboTextEl.style.fontSize = `${12 + pulse * 3}px`;
     comboFillEl.style.width = `${comboProgress * 100}%`;
   } else {
@@ -291,6 +292,53 @@ function drawComboImpact(ctx, now) {
     ctx.shadowBlur = 8;
     ctx.strokeText(`COMBO ${burst.combo}`, burst.x, textY);
     ctx.fillText(`COMBO ${burst.combo}`, burst.x, textY);
+    ctx.restore();
+  }
+}
+
+function drawComboInsuranceEffects(ctx, now) {
+  for (let i = comboInsuranceEffects.length - 1; i >= 0; i--) {
+    const effect = comboInsuranceEffects[i];
+    const age = now - effect.startedAt;
+    const duration = effect.kind === 'triggered' ? 900 : 720;
+    const t = age / duration;
+    if (t >= 1) {
+      comboInsuranceEffects.splice(i, 1);
+      continue;
+    }
+
+    const ease = 1 - Math.pow(1 - t, 3);
+    const alpha = 1 - t;
+    const triggered = effect.kind === 'triggered';
+    const x = state.width / 2;
+    const y = Math.max(92, state.dangerY + 34);
+    const radius = (triggered ? 52 : 38) + ease * (triggered ? 110 : 78);
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = (triggered ? 0.24 : 0.16) * alpha;
+    ctx.fillStyle = triggered ? '#35d7ff' : '#ffd447';
+    ctx.fillRect(0, 0, state.width, state.height);
+
+    ctx.globalAlpha = (triggered ? 0.95 : 0.78) * alpha;
+    ctx.strokeStyle = triggered ? '#35d7ff' : '#ffd447';
+    ctx.lineWidth = triggered ? 9 : 6;
+    ctx.shadowColor = triggered ? '#35d7ff' : '#ffd447';
+    ctx.shadowBlur = triggered ? 34 : 24;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.globalAlpha = (triggered ? 1 : 0.86) * alpha;
+    ctx.font = `900 ${triggered ? 24 : 20}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.92)';
+    ctx.fillStyle = triggered ? '#126fcf' : '#8a5a00';
+    const text = triggered ? 'COMBO 保險觸發' : `COMBO 保險 x${state.comboInsuranceCharges}`;
+    ctx.strokeText(text, x, y);
+    ctx.fillText(text, x, y);
     ctx.restore();
   }
 }
@@ -425,6 +473,116 @@ function drawPumpkinAuras(ctx, bodies, now) {
       ctx.setLineDash([]);
       ctx.restore();
     });
+}
+
+function drawSkillAssistEffects(ctx, now) {
+  if (magnetMergeLinks.length) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.globalCompositeOperation = 'screen';
+    magnetMergeLinks.forEach((link, index) => {
+      const pulse = 0.72 + Math.sin(now * 0.01 + index) * 0.28;
+      const glow = clamp(0.45 + link.strength * 0.7, 0.45, 1);
+      const flow = (now * 0.004 + index * 0.37) % 1;
+      const sparkX = link.ax + (link.bx - link.ax) * flow;
+      const sparkY = link.ay + (link.by - link.ay) * flow;
+      const ringPulse = 1 + pulse * 0.16;
+
+      ctx.globalAlpha = 0.42 * glow;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 8 + link.strength * 7;
+      ctx.shadowColor = '#35d7ff';
+      ctx.shadowBlur = 26;
+      ctx.beginPath();
+      ctx.moveTo(link.ax, link.ay);
+      ctx.lineTo(link.bx, link.by);
+      ctx.stroke();
+
+      ctx.globalAlpha = 0.9 * glow;
+      ctx.strokeStyle = '#35d7ff';
+      ctx.lineWidth = 3 + link.strength * 4;
+      ctx.shadowBlur = 18;
+      ctx.setLineDash([12, 9]);
+      ctx.lineDashOffset = -now * 0.06;
+      ctx.beginPath();
+      ctx.moveTo(link.ax, link.ay);
+      ctx.lineTo(link.bx, link.by);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.globalAlpha = 0.82 * pulse;
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowBlur = 22;
+      ctx.beginPath();
+      ctx.arc(sparkX, sparkY, 4 + link.strength * 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalAlpha = 0.58 * glow;
+      ctx.strokeStyle = '#35d7ff';
+      ctx.lineWidth = 3;
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(link.ax, link.ay, (link.ar || 22) * ringPulse + 9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(link.bx, link.by, (link.br || 22) * ringPulse + 9, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  if (mergeSenseTargets.length) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    mergeSenseTargets.forEach((target, index) => {
+      const pulse = 0.62 + Math.sin(now * 0.012 + index * 1.7) * 0.28;
+      const radius = target.radius + pulse * 16;
+      const alpha = target.triggered ? 0.95 : 0.72;
+
+      ctx.globalAlpha = 0.34 * alpha;
+      ctx.fillStyle = '#ffd447';
+      ctx.shadowColor = '#ffd447';
+      ctx.shadowBlur = 32;
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, radius * 0.92, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalAlpha = 0.92 * alpha;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = target.triggered ? 8 : 5;
+      ctx.shadowBlur = 26;
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.globalAlpha = 0.9 * alpha;
+      ctx.strokeStyle = '#ffd447';
+      ctx.lineWidth = target.triggered ? 4 : 3;
+      ctx.setLineDash([10, 7]);
+      ctx.lineDashOffset = -now * 0.06;
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, radius + 9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.globalAlpha = 0.82 * alpha;
+      ctx.strokeStyle = '#ff5bbd';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#ff5bbd';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.moveTo(target.ax, target.ay);
+      ctx.lineTo(target.bx, target.by);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = target.triggered ? 0.9 : 0.62;
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, target.triggered ? 8 : 5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
 }
 
 function drawEnvironmentEventEffects(ctx, now) {
@@ -730,9 +888,12 @@ function drawGameOverlay() {
     drawVegetableSprite(ctx, body.vegLevel, body.position.x, body.position.y, veg.radius, 1, body.angle, body.corruptionProgress);
   }
 
+  drawSkillAssistEffects(ctx, now);
+
   ctx.restore();
   drawBlastEffects(ctx, now);
   drawFertilizerEffects(ctx, now);
   drawComboImpact(ctx, now);
+  drawComboInsuranceEffects(ctx, now);
   drawTopUiOverlay(now);
 }

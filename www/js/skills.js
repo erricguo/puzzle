@@ -15,10 +15,15 @@ const LONG_TEMP_SKILL_DURATION = 15000;
 const GOLDEN_TIME_DURATION = 20000;
 const MERGE_SENSE_DURATION = 12000;
 const MAGNET_MERGE_DURATION = 10000;
+const MAGNET_MERGE_RADIUS = 230;
+const MAGNET_MERGE_FORCE = 0.000075;
+const MERGE_SENSE_RADIUS_MULTIPLIER = 1.5;
 const DISABLED_SKILL_IDS = new Set(['fertilizer']);
 
 const fertilizerImage = new Image();
 fertilizerImage.src = FERTILIZER_IMAGE_SRC;
+const magnetMergeLinks = [];
+const mergeSenseTargets = [];
 
 const SKILL_POOL = [
   {
@@ -648,6 +653,7 @@ function safetyCushionBonus(now = performance.now()) {
 
 function activateComboInsurance() {
   state.comboInsuranceCharges += 1;
+  pushComboInsuranceEffect?.('ready');
   updateHud();
 }
 
@@ -704,6 +710,7 @@ function rerollNextVegetable() {
 }
 
 function updateMagnetMerge(now = performance.now()) {
+  magnetMergeLinks.length = 0;
   if (now >= state.magnetMergeExpiresAt) return;
   const bodies = Composite.allBodies(world)
     .filter((body) => body.label === 'vegetable' && !body.isMerging && !body.isBlasting && !body.isCorrupted);
@@ -716,17 +723,31 @@ function updateMagnetMerge(now = performance.now()) {
       const dx = b.position.x - a.position.x;
       const dy = b.position.y - a.position.y;
       const distance = Math.hypot(dx, dy);
-      if (distance <= 0 || distance > 150) continue;
-      const force = 0.000018 * (1 - distance / 150);
+      if (distance <= 0 || distance > MAGNET_MERGE_RADIUS) continue;
+      const strength = 1 - distance / MAGNET_MERGE_RADIUS;
+      const force = MAGNET_MERGE_FORCE * strength * strength;
       const fx = dx / distance * force;
       const fy = dy / distance * force;
       Body.applyForce(a, a.position, { x: fx * a.mass, y: fy * a.mass });
       Body.applyForce(b, b.position, { x: -fx * b.mass, y: -fy * b.mass });
+      if (magnetMergeLinks.length < 18) {
+        magnetMergeLinks.push({
+          ax: a.position.x,
+          ay: a.position.y,
+          bx: b.position.x,
+          by: b.position.y,
+          ar: VEGETABLES[a.vegLevel].radius,
+          br: VEGETABLES[b.vegLevel].radius,
+          level: a.vegLevel,
+          strength
+        });
+      }
     }
   }
 }
 
 function updateMergeSense(now = performance.now()) {
+  mergeSenseTargets.length = 0;
   if (now >= state.mergeSenseExpiresAt) return;
   const bodies = Composite.allBodies(world)
     .filter((body) => body.label === 'vegetable' && !body.isMerging && !body.isBlasting && !body.isCorrupted);
@@ -736,10 +757,35 @@ function updateMergeSense(now = performance.now()) {
       const a = bodies[i];
       const b = bodies[j];
       if (a.vegLevel !== b.vegLevel || a.vegLevel >= VEGETABLES.length - 1) continue;
-      const mergeDistance = (VEGETABLES[a.vegLevel].radius + VEGETABLES[b.vegLevel].radius) * 1.18;
-      if (Math.hypot(a.position.x - b.position.x, a.position.y - b.position.y) <= mergeDistance) {
+      const distance = Math.hypot(a.position.x - b.position.x, a.position.y - b.position.y);
+      const mergeDistance = (VEGETABLES[a.vegLevel].radius + VEGETABLES[b.vegLevel].radius) * MERGE_SENSE_RADIUS_MULTIPLIER;
+      if (distance <= mergeDistance) {
+        mergeSenseTargets.push({
+          ax: a.position.x,
+          ay: a.position.y,
+          bx: b.position.x,
+          by: b.position.y,
+          x: (a.position.x + b.position.x) / 2,
+          y: (a.position.y + b.position.y) / 2,
+          radius: mergeDistance * 0.5,
+          level: a.vegLevel,
+          triggered: true
+        });
         mergeVegetables(a, b);
         return;
+      }
+      if (mergeSenseTargets.length < 12 && distance <= mergeDistance * 1.28) {
+        mergeSenseTargets.push({
+          ax: a.position.x,
+          ay: a.position.y,
+          bx: b.position.x,
+          by: b.position.y,
+          x: (a.position.x + b.position.x) / 2,
+          y: (a.position.y + b.position.y) / 2,
+          radius: mergeDistance * 0.5,
+          level: a.vegLevel,
+          triggered: false
+        });
       }
     }
   }
@@ -914,8 +960,11 @@ function resetSkillState() {
   state.fertilizerCharges = 0;
   state.activeSkillLevel = 0;
   state.comboInsuranceCharges = 0;
+  comboInsuranceEffects.length = 0;
   blastEffects.length = 0;
   fertilizerEffects.length = 0;
+  magnetMergeLinks.length = 0;
+  mergeSenseTargets.length = 0;
   activeSkillBarsEl.hidden = true;
   activeSkillBarsEl.replaceChildren();
   skillPanel.hidden = true;

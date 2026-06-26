@@ -13,7 +13,7 @@ const ENVIRONMENT_EVENT_DEFS = {
   },
   pest: {
     name: '蟲害',
-    description: '部分蔬菜腐化加速',
+    description: 'Combo 加成 -30%',
     className: 'event-pest',
     duration: ENV_EVENT_DURATION
   },
@@ -132,18 +132,8 @@ function rainFrictionFor(baseFriction, now = performance.now()) {
     : baseFriction;
 }
 
-function isPestAffected(body) {
-  if (!body) return false;
-  if (body.pestAffected === undefined) {
-    body.pestAffected = Math.random() < PEST_AFFECT_CHANCE;
-  }
-  return body.pestAffected;
-}
-
-function pestCorruptionMultiplier(body, now = performance.now()) {
-  return isEnvironmentEventActive('pest', now) && isPestAffected(body)
-    ? PEST_CORRUPTION_MULTIPLIER
-    : 1;
+function pestComboScoreMultiplier(now = performance.now()) {
+  return isEnvironmentEventActive('pest', now) ? PEST_COMBO_SCORE_MULTIPLIER : 1;
 }
 
 function activeEnvironmentEventLabels(now = performance.now()) {

@@ -356,7 +356,7 @@ async function submitLeaderboardScore() {
       best_level: row.best_level,
       board_type: row.board_type
     })
-    .select('id, player_name, score, best_combo, best_level, board_type, created_at')
+    .select('id, player_id, player_name, score, best_combo, best_level, board_type, created_at')
     .single();
 
   if (!error && data) {
@@ -409,6 +409,12 @@ function isRecentScoreRow(row, recent = leaderboardState.recentScoreRow) {
     && row.created_at === recent.created_at;
 }
 
+function isCurrentPlayerLeaderboardRow(row, boardType = currentBoardType()) {
+  return Boolean(row?.player_id && leaderboardState.playerId)
+    && row.player_id === leaderboardState.playerId
+    && normalizeLeaderboardRow(row).board_type === boardType;
+}
+
 async function loadLeaderboard() {
   const boardType = currentBoardType();
   leaderboardMessageEl.textContent = '載入中...';
@@ -422,7 +428,7 @@ async function loadLeaderboard() {
 
   let query = leaderboardState.client
     .from('vegetable_merge_scores')
-    .select('id, player_name, score, best_combo, best_level, board_type, created_at')
+    .select('id, player_id, player_name, score, best_combo, best_level, board_type, created_at')
     .eq('board_type', boardType)
     .gt('best_combo', 0);
 
@@ -458,7 +464,8 @@ function renderLeaderboard() {
   rows.forEach((row, index) => {
     const item = document.createElement('li');
     const isRecent = isRecentScoreRow(row);
-    item.className = `leaderboard-item${isRecent ? ' recent' : ''}`;
+    const isCurrentPlayer = isCurrentPlayerLeaderboardRow(row, boardType);
+    item.className = `leaderboard-item${isRecent || isCurrentPlayer ? ' recent' : ''}`;
     const detailText = `${formatDate(row.created_at)}`;
     item.innerHTML = `
       <span class="rank">${index + 1}</span>
@@ -471,8 +478,8 @@ function renderLeaderboard() {
         <em>COMBO ${row.best_combo || 0}</em>
       </span>
     `;
-    if (isRecent) {
-      item.querySelector('.player strong')?.insertAdjacentHTML('beforeend', '<span class="recent-label">本局</span>');
+    if (isRecent || isCurrentPlayer) {
+      item.querySelector('.player strong')?.insertAdjacentHTML('beforeend', `<span class="recent-label">${isRecent ? '本局' : '我的'}</span>`);
       recentItem = item;
     }
     leaderboardListEl.appendChild(item);

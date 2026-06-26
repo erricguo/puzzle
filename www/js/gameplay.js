@@ -309,6 +309,7 @@ function resetGame() {
   leaderboardState.recentScoreRow = null;
   leaderboardState.recentScoreRank = null;
   comboBursts.length = 0;
+  comboInsuranceEffects.length = 0;
   gameOverPanel.hidden = true;
   gameOverPanel.classList.remove('entering');
   pausePanel.hidden = true;
@@ -636,6 +637,7 @@ function returnToStartScene() {
   leaderboardState.recentScoreRow = null;
   leaderboardState.recentScoreRank = null;
   comboBursts.length = 0;
+  comboInsuranceEffects.length = 0;
   engine.timing.timeScale = 1;
   resetSkillState();
   leaderboardScene.hidden = true;
@@ -679,8 +681,7 @@ function checkDangerLine() {
 
 function isCorruptionUnlocked() {
   return state.debugCorruptionUnlocked
-    || state.playerLevel >= CORRUPTION_UNLOCK_LEVEL
-    || isEnvironmentEventActive('pest');
+    || state.playerLevel >= CORRUPTION_UNLOCK_LEVEL;
 }
 
 function corruptionDurationForLevel(level) {
@@ -757,7 +758,7 @@ function updateCorruption(now = performance.now()) {
     if (body.isCorrupted) continue;
     if (isProtectedByPumpkinAura(body, pumpkins)) continue;
     const duration = corruptionDurationForLevel(body.vegLevel);
-    const corruptionGain = delta * pestCorruptionMultiplier(body, now);
+    const corruptionGain = delta;
     const harvestRecovery = delta * harvestCorruptionRecovery(now);
     body.corruptionElapsed = Math.max(0, (body.corruptionElapsed || 0) + corruptionGain - harvestRecovery);
     const step = Math.floor((body.corruptionElapsed / duration) * 10);
