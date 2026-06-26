@@ -74,6 +74,7 @@ function clearExpiredCombo(now = performance.now()) {
     state.combo = 0;
     state.comboDuration = 0;
     state.comboExpiresAt = 0;
+    state.feverTimeTriggered = false;
   }
 }
 
@@ -85,6 +86,9 @@ function registerCombo(now = performance.now()) {
   state.comboExpiresAt = now + state.comboDuration;
   state.comboPulseStartedAt = now;
   state.comboPulseColor = comboColor(state.combo);
+  if (state.combo >= FEVER_COMBO_THRESHOLD && !state.feverTimeTriggered) {
+    activateFeverTime(now);
+  }
   return state.combo;
 }
 
@@ -109,4 +113,16 @@ function pushComboInsuranceEffect(kind = 'ready', now = performance.now()) {
     kind,
     startedAt: now
   });
+}
+
+function activateFeverTime(now = performance.now()) {
+  state.feverTimeTriggered = true;
+  state.feverTimeStartedAt = now;
+  state.feverTimeExpiresAt = now + FEVER_TIME_DURATION;
+  state.comboPulseStartedAt = now;
+  state.comboPulseColor = '#ff5bbd';
+}
+
+function isFeverTimeActive(now = performance.now()) {
+  return now < state.feverTimeExpiresAt;
 }

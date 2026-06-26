@@ -2,6 +2,14 @@ Events.on(engine, 'collisionStart', (event) => {
   for (const pair of event.pairs) {
     const a = pair.bodyA;
     const b = pair.bodyB;
+    if (a.label === 'vegetable' && a.isFeverDrop && b.label === 'wall' && b.isFloor) {
+      setFeverVegetableMode(a, false);
+      continue;
+    }
+    if (b.label === 'vegetable' && b.isFeverDrop && a.label === 'wall' && a.isFloor) {
+      setFeverVegetableMode(b, false);
+      continue;
+    }
     if (a.label === 'fertilizer' || b.label === 'fertilizer') {
       const fertilizer = a.label === 'fertilizer' ? a : b;
       const other = fertilizer === a ? b : a;
@@ -171,7 +179,7 @@ window.addEventListener('orientationchange', () => setTimeout(resizeGame, 250));
 document.addEventListener('visibilitychange', updatePageAudioState);
 window.addEventListener('pagehide', () => {
   state.pageActive = false;
-  stopMusic();
+  pauseMusic();
 });
 window.addEventListener('pageshow', updatePageAudioState);
 

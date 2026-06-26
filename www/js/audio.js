@@ -76,6 +76,20 @@ function createMusicSource() {
   return source;
 }
 
+function releaseMusicSource() {
+  if (!audioState.musicSource) return null;
+  const source = audioState.musicSource;
+  audioState.musicSource = null;
+  source.onended = null;
+  try {
+    source.stop();
+  } catch {
+    // The source may already have ended; cleanup can still continue.
+  }
+  source.disconnect();
+  return source;
+}
+
 function updateAudioVolume() {
   if (audioState.master) {
     audioState.master.gain.setTargetAtTime(audioState.enabled ? 1 : 0, audioState.context.currentTime, 0.025);
@@ -219,17 +233,27 @@ function startMusic() {
 
   const source = createMusicSource();
   if (!source) return;
+  const offset = audioState.musicBuffer.duration
+    ? audioState.musicOffset % audioState.musicBuffer.duration
+    : 0;
   audioState.musicSource = source;
-  source.start();
+  audioState.musicStartedAt = context.currentTime - offset;
+  source.start(0, offset);
 }
 
-function stopMusic() {
+function pauseMusic() {
+  if (!audioState.musicSource || !audioState.context || !audioState.musicBuffer) return;
+  audioState.musicOffset = (audioState.context.currentTime - audioState.musicStartedAt) % audioState.musicBuffer.duration;
+  releaseMusicSource();
+}
+
+function stopMusic({ resetOffset = true } = {}) {
   if (audioState.musicSource) {
-    const source = audioState.musicSource;
-    audioState.musicSource = null;
-    source.onended = null;
-    source.stop();
-    source.disconnect();
+    releaseMusicSource();
+  }
+  audioState.musicStartedAt = 0;
+  if (resetOffset) {
+    audioState.musicOffset = 0;
   }
 }
 
@@ -238,6 +262,6 @@ function updatePageAudioState() {
   if (state.pageActive) {
     startMusic();
   } else {
-    stopMusic();
+    pauseMusic();
   }
 }

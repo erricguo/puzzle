@@ -28,16 +28,20 @@ function createWallBodies() {
   walls.floor = Bodies.rectangle(state.width / 2, state.height + thickness / 2, state.width, thickness, {
     isStatic: true,
     label: 'wall',
+    collisionFilter: { category: 0x0002, mask: 0xffffffff },
     render: { fillStyle: '#4f6f3a' }
   });
+  walls.floor.isFloor = true;
   walls.left = Bodies.rectangle(-thickness / 2, state.height / 2, thickness, state.height * 2, {
     isStatic: true,
     label: 'wall',
+    collisionFilter: { category: 0x0002, mask: 0xffffffff },
     render: { visible: false }
   });
   walls.right = Bodies.rectangle(state.width + thickness / 2, state.height / 2, thickness, state.height * 2, {
     isStatic: true,
     label: 'wall',
+    collisionFilter: { category: 0x0002, mask: 0xffffffff },
     render: { visible: false }
   });
   Composite.add(world, [walls.floor, walls.left, walls.right]);
@@ -105,6 +109,15 @@ function vegetableOptions(level) {
   };
 }
 
+function setFeverVegetableMode(body, active) {
+  if (!body) return;
+  body.isFeverDrop = active;
+  body.collisionFilter.group = active ? -body.id : 0;
+  body.collisionFilter.category = 0x0001;
+  body.collisionFilter.mask = active ? 0x0002 : 0xffffffff;
+  body.frictionAir = active ? 0.001 : 0.002;
+}
+
 function createVegetable(level, x, y) {
   const veg = VEGETABLES[level];
   const body = Bodies.circle(x, y, veg.radius, vegetableOptions(level));
@@ -160,6 +173,9 @@ function dropVegetable() {
   const cfg = VEGETABLES[state.nextLevel];
   const x = clamp(state.aimX, cfg.radius + 8, state.width - cfg.radius - 8);
   const body = createVegetable(state.nextLevel, x, 72);
+  if (isFeverTimeActive(now)) {
+    setFeverVegetableMode(body, true);
+  }
   const windOffset = windVelocityOffset(now);
   const dropVelocityMultiplier = talentDropVelocityMultiplier() * (isPrecisionAimActive(now) ? 0.55 : 1);
   Body.setVelocity(body, { x: (Math.random() - 0.5) * 1.2 * dropVelocityMultiplier + windOffset, y: 0 });
@@ -169,6 +185,9 @@ function dropVegetable() {
     const offset = cfg.radius + 10;
     const secondX = clamp(x + (x < state.width / 2 ? offset : -offset), cfg.radius + 8, state.width - cfg.radius - 8);
     const second = createVegetable(state.nextLevel, secondX, 72);
+    if (isFeverTimeActive(now)) {
+      setFeverVegetableMode(second, true);
+    }
     Body.setVelocity(second, { x: (Math.random() - 0.5) * 1.2 * dropVelocityMultiplier + windOffset * 0.8, y: 0 });
     Body.setAngle(second, (Math.random() - 0.5) * 0.7);
     Body.setAngularVelocity(second, (Math.random() - 0.5) * 0.16);
@@ -223,6 +242,67 @@ function endAim(event) {
   state.pointerId = null;
   render.canvas.releasePointerCapture?.(event.pointerId);
   dropVegetable();
+}
+
+function feverTargetFor(body, bodies = Composite.allBodies(world)) {
+  if (!body?.isFeverDrop || body.isMerging || body.isBlasting || body.isCorrupted) return null;
+  return bodies
+    .filter((target) => (
+      target !== body &&
+      target.label === 'vegetable' &&
+      !target.isFeverDrop &&
+      !target.isMerging &&
+      !target.isBlasting &&
+      !target.isCorrupted &&
+      target.vegLevel === body.vegLevel
+    ))
+    .sort((a, b) => (
+      Math.hypot(body.position.x - a.position.x, body.position.y - a.position.y) -
+      Math.hypot(body.position.x - b.position.x, body.position.y - b.position.y)
+    ))[0] || null;
+}
+
+function updateFeverVegetables(now = performance.now()) {
+  const bodies = Composite.allBodies(world);
+  const feverActive = isFeverTimeActive(now);
+  bodies.forEach((body) => {
+    if (body.label !== 'vegetable' || !body.isFeverDrop || body.isMerging || body.isBlasting) return;
+    if (!feverActive) {
+      setFeverVegetableMode(body, false);
+      return;
+    }
+
+    const target = feverTargetFor(body, bodies);
+    body.feverTargetId = target?.id || null;
+    if (!target) {
+      setFeverVegetableMode(body, true);
+      return;
+    }
+    setFeverVegetableMode(body, true);
+
+    const dx = target.position.x - body.position.x;
+    const dy = target.position.y - body.position.y;
+    const distance = Math.hypot(dx, dy);
+    const mergeDistance = (VEGETABLES[body.vegLevel].radius + VEGETABLES[target.vegLevel].radius) * 0.82;
+    if (distance <= mergeDistance) {
+      setFeverVegetableMode(body, false);
+      mergeVegetables(body, target);
+      return;
+    }
+
+    const direction = distance > 0 ? { x: dx / distance, y: dy / distance } : { x: 0, y: 1 };
+    Body.applyForce(body, body.position, {
+      x: direction.x * FEVER_TARGET_FORCE * body.mass,
+      y: direction.y * FEVER_TARGET_FORCE * body.mass
+    });
+    const speed = Math.hypot(body.velocity.x, body.velocity.y);
+    if (speed > FEVER_TARGET_MAX_SPEED) {
+      Body.setVelocity(body, {
+        x: body.velocity.x / speed * FEVER_TARGET_MAX_SPEED,
+        y: body.velocity.y / speed * FEVER_TARGET_MAX_SPEED
+      });
+    }
+  });
 }
 
 function mergeVegetables(a, b) {
@@ -296,6 +376,9 @@ function resetGame() {
   state.comboDuration = 0;
   state.comboExpiresAt = 0;
   state.comboPulseStartedAt = 0;
+  state.feverTimeExpiresAt = 0;
+  state.feverTimeStartedAt = 0;
+  state.feverTimeTriggered = false;
   state.corruptionActive = false;
   state.corruptionLastAt = 0;
   state.debugCorruptionUnlocked = false;
@@ -627,6 +710,9 @@ function returnToStartScene() {
   state.comboDuration = 0;
   state.comboExpiresAt = 0;
   state.comboPulseStartedAt = 0;
+  state.feverTimeExpiresAt = 0;
+  state.feverTimeStartedAt = 0;
+  state.feverTimeTriggered = false;
   state.scoreSaved = false;
   state.activeEnvironmentEvents = [];
   state.environmentEventsPausedAt = 0;
@@ -661,6 +747,7 @@ function checkDangerLine() {
   updateStrongWind(now);
   updateRainFriction(now);
   updateActiveSkills(now);
+  updateFeverVegetables(now);
   updateCorruption(now);
   clearExpiredCombo(now);
   const bodies = Composite.allBodies(world).filter((body) => body.label === 'vegetable' && !body.isMerging && !body.isBlasting);

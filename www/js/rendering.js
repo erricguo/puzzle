@@ -235,6 +235,17 @@ function drawTopUiOverlay(now) {
     comboBarEl.hidden = true;
   }
 
+  if (isFeverTimeActive(now)) {
+    const remaining = Math.ceil((state.feverTimeExpiresAt - now) / 1000);
+    comboBarEl.hidden = false;
+    comboBarEl.style.width = `${Math.min(172, state.width * 0.48)}px`;
+    comboBarEl.style.setProperty('--combo-color', '#ff5bbd');
+    comboBarEl.style.setProperty('--combo-glow', '#ff5bbd');
+    comboTextEl.textContent = `FEVER TIME ${remaining}s`;
+    comboTextEl.style.fontSize = '15px';
+    comboFillEl.style.width = `${clamp((state.feverTimeExpiresAt - now) / FEVER_TIME_DURATION, 0, 1) * 100}%`;
+  }
+
   const eventLabels = activeEnvironmentEventLabels(now);
   const statusLabels = [
     ...(state.corruptionActive ? ['腐化'] : []),
@@ -341,6 +352,64 @@ function drawComboInsuranceEffects(ctx, now) {
     ctx.fillText(text, x, y);
     ctx.restore();
   }
+}
+
+function drawFeverTimeEffects(ctx, bodies, now) {
+  if (!isFeverTimeActive(now)) return;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  const pulse = 0.65 + Math.sin(now * 0.01) * 0.25;
+  ctx.globalAlpha = 0.12 + pulse * 0.08;
+  ctx.fillStyle = '#ff5bbd';
+  ctx.fillRect(0, 0, state.width, state.height);
+
+  bodies
+    .filter((body) => body.label === 'vegetable' && body.isFeverDrop && !body.isMerging && !body.isBlasting)
+    .forEach((body, index) => {
+      const target = bodies.find((item) => item.id === body.feverTargetId);
+      const color = VEGETABLES[body.vegLevel]?.color || '#ff5bbd';
+      ctx.globalAlpha = 0.82;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 7;
+      ctx.shadowColor = '#ff5bbd';
+      ctx.shadowBlur = 24;
+      ctx.beginPath();
+      ctx.arc(body.position.x, body.position.y, VEGETABLES[body.vegLevel].radius + 12 + pulse * 7, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 8]);
+      ctx.lineDashOffset = -now * 0.07;
+      ctx.beginPath();
+      ctx.arc(body.position.x, body.position.y, VEGETABLES[body.vegLevel].radius + 18 + pulse * 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (target) {
+        const flow = (now * 0.004 + index * 0.31) % 1;
+        const sx = body.position.x + (target.position.x - body.position.x) * flow;
+        const sy = body.position.y + (target.position.y - body.position.y) * flow;
+        ctx.globalAlpha = 0.76;
+        ctx.strokeStyle = '#ff5bbd';
+        ctx.lineWidth = 4;
+        ctx.shadowColor = '#ff5bbd';
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.moveTo(body.position.x, body.position.y);
+        ctx.lineTo(target.position.x, target.position.y);
+        ctx.stroke();
+
+        ctx.globalAlpha = 0.92;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+  ctx.restore();
 }
 
 function drawBlastEffects(ctx, now) {
@@ -865,6 +934,7 @@ function drawGameOverlay() {
   const bodies = Composite.allBodies(world);
   drawEnvironmentEventEffects(ctx, now);
   drawPumpkinAuras(ctx, bodies, now);
+  drawFeverTimeEffects(ctx, bodies, now);
 
   for (const body of bodies) {
     if (body.label === 'fertilizer') {
