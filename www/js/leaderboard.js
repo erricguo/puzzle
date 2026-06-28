@@ -110,6 +110,7 @@ function setupSupabase() {
   googleSignInButton.disabled = true;
 
   leaderboardState.authSubscription = leaderboardState.client.auth.onAuthStateChange((_event, session) => {
+    if (leaderboardState.isAuthBusy && !session?.user) return;
     applySupabaseUser(session?.user || null).catch((error) => {
       console.warn('Supabase user apply failed', error);
     });
@@ -118,7 +119,39 @@ function setupSupabase() {
     }
   }).data?.subscription;
 
+  if (isWebPlatform() && hasGoogleSignInRedirectResult()) {
+    initializeGoogleSignIn()
+      .catch((error) => {
+        console.warn('Google Sign-In redirect failed', error);
+      })
+      .finally(() => {
+        syncSupabaseUser();
+      });
+    return;
+  }
+
+  initializeGoogleSignIn().catch((error) => {
+    console.warn('Google Sign-In initialization failed', error);
+  });
   syncSupabaseUser();
+}
+
+async function initializeGoogleSignIn() {
+  const googleSignIn = getGoogleSignInPlugin();
+  const clientId = getGoogleClientId();
+  if (!googleSignIn || !clientId) return;
+
+  const options = { clientId };
+  if (isWebPlatform()) {
+    options.redirectUrl = authRedirectUrl();
+  }
+  await googleSignIn.initialize(options);
+
+  if (isWebPlatform() && hasGoogleSignInRedirectResult()) {
+    const result = await googleSignIn.handleRedirectCallback();
+    await signInToSupabaseWithGoogleIdToken(result?.idToken);
+    leaderboardState.isAuthBusy = false;
+  }
 }
 
 async function syncSupabaseUser() {
@@ -261,6 +294,20 @@ function getEmailLocalPart(email) {
   if (typeof email !== 'string' || !email.includes('@')) return '';
   return email.split('@')[0] || '';
 }
+
+function getGoogleSignInPlugin() {
+  const plugins = window.Capacitor?.Plugins || {};
+  return plugins.GoogleSignIn || window.capacitorGoogleSignIn?.GoogleSignIn || null;
+}
+
+function getGoogleClientId() {
+  return window.SUPABASE_CONFIG?.googleClientId || window.GOOGLE_CLIENT_ID || '';
+}
+
+function isWebPlatform() {
+  return window.Capacitor?.getPlatform?.() === 'web';
+}
+
 function authRedirectUrl() {
   const url = new URL(window.location.href);
   url.hash = '';
@@ -268,8 +315,51 @@ function authRedirectUrl() {
   return url.toString();
 }
 
+function hasGoogleSignInRedirectResult() {
+  const params = new URLSearchParams(window.location.hash.substring(1));
+  return params.has('id_token') || params.has('error');
+}
+
+async function getGoogleIdToken() {
+  const googleSignIn = getGoogleSignInPlugin();
+  if (!googleSignIn?.signIn) {
+    throw new Error('Capawesome Google Sign-In plugin is not available.');
+  }
+  if (!getGoogleClientId()) {
+    throw new Error('Missing Google web client ID. Set SUPABASE_CONFIG.googleClientId.');
+  }
+
+  await initializeGoogleSignIn();
+  const result = await googleSignIn.signIn();
+  return result?.idToken || '';
+}
+
+function normalizeGoogleSignInError(error) {
+  const code = String(error?.code || '');
+  const message = String(error?.message || error || 'Google sign-in failed');
+  if (code === 'SIGN_IN_CANCELED' || /canceled/i.test(message)) {
+    return new Error('Google 登入被取消');
+  }
+  if (/not initialized/i.test(message)) {
+    return new Error('Google Sign-In 尚未初始化');
+  }
+  return new Error(message);
+}
+
+async function signInToSupabaseWithGoogleIdToken(idToken) {
+  if (!idToken) {
+    throw new Error('Google did not return an ID token.');
+  }
+  const { error } = await leaderboardState.client.auth.signInWithIdToken({
+    provider: 'google',
+    token: idToken
+  });
+  if (error) throw error;
+}
+
 async function signInWithGoogle() {
   if (!leaderboardState.client) return;
+  if (leaderboardState.isAuthBusy) return;
 
   googleSignInButton.disabled = true;
   leaderboardState.isAuthBusy = true;
@@ -287,6 +377,7 @@ async function signInWithGoogle() {
     return;
   }
 
+  accountStatusEl.textContent = '正在開啟 Google 登入...';
   leaderboardMessageEl.textContent = '正在前往 Google 登入...';
   if (leaderboardState.user?.is_anonymous) {
     try {
@@ -299,30 +390,32 @@ async function signInWithGoogle() {
     } catch (error) {
       console.warn('Guest progress save before Google sign-in failed', error);
     }
-
-    const { error: signOutError } = await leaderboardState.client.auth.signOut();
-    if (signOutError) {
-      leaderboardState.isAuthBusy = false;
-      googleSignInButton.disabled = false;
-      leaderboardMessageEl.textContent = `Guest sign-out failed: ${signOutError.message}`;
-      return;
-    }
   }
 
-  const { error } = await leaderboardState.client.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: authRedirectUrl(),
-      queryParams: {
-        prompt: 'select_account'
-      }
-    }
-  });
+  let idToken = '';
+  try {
+    idToken = await getGoogleIdToken();
+  } catch (error) {
+    leaderboardState.isAuthBusy = false;
+    googleSignInButton.disabled = false;
+    const normalizedError = normalizeGoogleSignInError(error);
+    accountStatusEl.textContent = `Google 登入失敗: ${normalizedError.message}`;
+    leaderboardMessageEl.textContent = `Google 登入失敗: ${normalizedError.message}`;
+    return;
+  }
+
+  accountStatusEl.textContent = '正在登入 Supabase...';
+
+  const error = await signInToSupabaseWithGoogleIdToken(idToken)
+    .then(() => null)
+    .catch((signInError) => signInError);
 
   leaderboardState.isAuthBusy = false;
   if (error) {
     googleSignInButton.disabled = false;
-    leaderboardMessageEl.textContent = `Google 登入失敗: ${error.message}`;
+    const normalizedError = normalizeGoogleSignInError(error);
+    accountStatusEl.textContent = `Google 登入失敗: ${normalizedError.message}`;
+    leaderboardMessageEl.textContent = `Google 登入失敗: ${normalizedError.message}`;
   }
 }
 

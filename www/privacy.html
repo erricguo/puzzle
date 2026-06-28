@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f7fbef" />
+  <title>蔬菜合成｜隱私權政策</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6faef;
+      --paper: #ffffff;
+      --ink: #1f3527;
+      --muted: #647262;
+      --line: #dfe8d7;
+      --leaf: #2f8d57;
+      --leaf-dark: #216741;
+      --sun: #ffb23f;
+      --aqua: #36b7aa;
+      --shadow: 0 18px 45px rgba(36, 73, 42, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.75;
+      color: var(--ink);
+      background:
+        linear-gradient(rgba(255,255,255,0.48) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.48) 1px, transparent 1px),
+        radial-gradient(circle at 50% 0%, rgba(255, 206, 92, 0.28), transparent 34rem),
+        linear-gradient(180deg, #f9fdef 0%, var(--bg) 45%, #e8f6dc 100%);
+      background-size: 44px 44px, 44px 44px, auto, auto;
+    }
+
+    a {
+      color: var(--leaf-dark);
+      text-decoration-thickness: 2px;
+      text-underline-offset: 4px;
+    }
+
+    .page {
+      width: min(960px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0 56px;
+    }
+
+    .hero {
+      padding: 36px 0 28px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 5px 14px;
+      border: 1px solid rgba(47, 141, 87, 0.18);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--leaf-dark);
+      font-size: 0.92rem;
+      font-weight: 700;
+      box-shadow: 0 8px 22px rgba(36, 73, 42, 0.08);
+    }
+
+    h1 {
+      margin: 18px 0 10px;
+      font-size: clamp(2.35rem, 7vw, 4.8rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+      color: #24492a;
+    }
+
+    .lead {
+      max-width: 720px;
+      margin: 0;
+      color: #4f614d;
+      font-size: clamp(1rem, 2.5vw, 1.16rem);
+      font-weight: 600;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 26px;
+    }
+
+    .meta-item {
+      min-height: 86px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.78);
+      box-shadow: 0 10px 26px rgba(36, 73, 42, 0.08);
+    }
+
+    .meta-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .meta-item strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 1.02rem;
+      overflow-wrap: anywhere;
+    }
+
+    .policy {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: var(--shadow);
+    }
+
+    .section {
+      padding: 28px clamp(20px, 5vw, 44px);
+      border-top: 1px solid var(--line);
+    }
+
+    .section:first-child {
+      border-top: 0;
+    }
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 12px;
+      color: #24492a;
+      font-size: clamp(1.22rem, 3.2vw, 1.6rem);
+      letter-spacing: 0;
+    }
+
+    h2::before {
+      content: "";
+      flex: 0 0 auto;
+      width: 10px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(180deg, var(--sun), var(--aqua));
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    p:last-child,
+    ul:last-child {
+      margin-bottom: 0;
+    }
+
+    ul {
+      margin: 8px 0 16px;
+      padding-left: 1.25rem;
+    }
+
+    li {
+      margin: 6px 0;
+      padding-left: 2px;
+    }
+
+    .notice {
+      margin-top: 18px;
+      padding: 16px 18px;
+      border: 1px solid rgba(255, 178, 63, 0.5);
+      border-radius: 8px;
+      background: #fff7df;
+      color: #5b4515;
+      font-weight: 700;
+    }
+
+    .footer {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      text-align: center;
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        width: min(100% - 24px, 960px);
+        padding-top: 24px;
+      }
+
+      .hero {
+        padding-top: 24px;
+      }
+
+      .meta {
+        grid-template-columns: 1fr;
+      }
+
+      .section {
+        padding-top: 24px;
+        padding-bottom: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <span class="badge">蔬菜合成｜Privacy Policy</span>
+      <h1>隱私權政策</h1>
+      <p class="lead">我們重視您的隱私與個人資料保護。本政策說明「蔬菜合成」如何收集、使用、儲存、分享及保護使用者資料。</p>
+      <div class="meta" aria-label="政策摘要">
+        <div class="meta-item">
+          <span>應用程式</span>
+          <strong>蔬菜合成</strong>
+        </div>
+        <div class="meta-item">
+          <span>最後更新</span>
+          <strong>2026 年 6 月 28 日</strong>
+        </div>
+        <div class="meta-item">
+          <span>聯絡信箱</span>
+          <strong>請填入您的聯絡信箱</strong>
+        </div>
+      </div>
+    </header>
+
+    <article class="policy">
+      <section class="section">
+        <h2>一、開發者資訊</h2>
+        <p>應用程式名稱：蔬菜合成</p>
+        <p>開發者：請填入開發者名稱</p>
+        <p>聯絡信箱：請填入您的聯絡信箱</p>
+        <p>如果您對本隱私權政策或資料處理方式有任何問題，請透過上述信箱與我們聯絡。</p>
+      </section>
+
+      <section class="section">
+        <h2>二、我們收集的資料</h2>
+        <p>本應用程式可能會收集或處理以下資料：</p>
+        <ul>
+          <li>帳號與登入資料：當您使用 Google 登入時，應用程式可能會透過 Google 與 Supabase 驗證服務取得登入所需的基本資料，例如使用者識別碼、電子郵件地址、顯示名稱與 Google 帳號提供的基本個人資料。</li>
+          <li>匿名帳號資料：若您未使用 Google 登入，應用程式可能會建立匿名使用者識別碼，用於保存遊戲進度、分數、任務與排行榜紀錄。</li>
+          <li>遊戲資料：例如分數、最佳 COMBO、遊戲進度、每日任務進度、商城或遊戲內解鎖內容，以及蔬菜圖鑑解鎖狀態。</li>
+          <li>廣告相關資料：本應用程式可能使用 Google AdMob 或其他廣告服務顯示廣告。廣告服務供應商可能會依其政策收集裝置資訊、廣告識別碼、互動紀錄或其他用於廣告投放、成效分析與防止濫用的資料。</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>三、資料使用目的</h2>
+        <p>我們收集與使用資料的目的包括：</p>
+        <ul>
+          <li>提供遊戲功能與帳號登入服務。</li>
+          <li>保存與同步遊戲進度。</li>
+          <li>顯示排行榜與個人成績。</li>
+          <li>處理每日任務、商城、圖鑑等遊戲功能。</li>
+          <li>維持應用程式正常運作與安全性。</li>
+          <li>防止作弊、濫用或異常行為。</li>
+          <li>顯示廣告與分析廣告成效。</li>
+          <li>改善遊戲體驗與服務品質。</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>四、資料分享對象</h2>
+        <p>我們不會販售您的個人資料。在提供服務所必要的範圍內，資料可能會由以下第三方服務供應商處理：</p>
+        <ul>
+          <li>Supabase：用於帳號驗證、資料庫、遊戲進度與排行榜資料儲存。</li>
+          <li>Google：用於 Google 登入、Google Play 服務及相關驗證功能。</li>
+          <li>Google AdMob：用於廣告顯示、廣告成效分析與防止廣告濫用。</li>
+        </ul>
+        <p>這些第三方服務會依其各自的隱私權政策處理資料。您可以參考 Google 的隱私權政策：<a href="https://policies.google.com/privacy" rel="noopener noreferrer">https://policies.google.com/privacy</a></p>
+      </section>
+
+      <section class="section">
+        <h2>五、資料儲存與安全</h2>
+        <p>我們會採取合理的技術與管理措施保護使用者資料，避免未經授權的存取、修改、揭露或毀損。</p>
+        <p>資料可能儲存在第三方雲端服務中，例如 Supabase。雖然我們會盡力保護資料安全，但任何網路傳輸或電子儲存方式都無法保證百分之百安全。</p>
+      </section>
+
+      <section class="section">
+        <h2>六、資料保留與刪除</h2>
+        <p>我們會在提供遊戲服務所需期間保留使用者資料。</p>
+        <p>若您希望刪除帳號資料、遊戲進度或排行榜資料，您可以透過本頁所列聯絡信箱與我們聯絡。收到請求後，我們會在合理期間內處理資料刪除要求。但若法律、資安、防止濫用或服務維護需要，我們可能會保留必要資料一段時間。</p>
+      </section>
+
+      <section class="section">
+        <h2>七、兒童隱私</h2>
+        <p>本應用程式並非專門針對兒童設計。我們不會故意收集兒童的個人資料。</p>
+        <p>若您是家長或監護人，並認為兒童在未經同意的情況下向我們提供了個人資料，請透過本頁所列聯絡信箱與我們聯絡，我們會協助處理相關資料刪除請求。</p>
+      </section>
+
+      <section class="section">
+        <h2>八、使用者權利</h2>
+        <p>依您所在地區適用的法律，您可能擁有以下權利：</p>
+        <ul>
+          <li>查詢我們持有的個人資料。</li>
+          <li>要求更正不正確的資料。</li>
+          <li>要求刪除個人資料。</li>
+          <li>撤回同意或停止特定資料處理。</li>
+          <li>詢問資料使用與分享方式。</li>
+        </ul>
+        <p>如需行使上述權利，請透過本頁所列聯絡信箱與我們聯絡。</p>
+      </section>
+
+      <section class="section">
+        <h2>九、第三方服務</h2>
+        <p>本應用程式可能使用第三方 SDK、服務或連結。第三方服務的資料處理方式不受本政策完全控制，請參考各第三方服務的隱私權政策。</p>
+      </section>
+
+      <section class="section">
+        <h2>十、政策變更</h2>
+        <p>我們可能會不定期更新本隱私權政策。若有重大變更，我們會更新本頁面的「最後更新日期」。建議您定期查看本政策，以了解最新內容。</p>
+      </section>
+
+      <section class="section">
+        <h2>十一、聯絡我們</h2>
+        <p>如果您對本隱私權政策有任何問題、意見或資料刪除請求，請聯絡：</p>
+        <ul>
+          <li>開發者：erricguo</li>
+          <li>電子郵件：erricguo@gmail.com</li>
+          <li>隱私權政策網址：https://quilla.dev/privacy.html</li>
+        </ul>
+        <div class="notice">發布到 Google Play 前，請務必將開發者名稱、聯絡信箱與政策網址替換為正式資訊。</div>
+      </section>
+    </article>
+
+    <p class="footer">© 2026 蔬菜合成。All rights reserved.</p>
+  </main>
+</body>
+</html>
