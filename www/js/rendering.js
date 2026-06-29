@@ -551,27 +551,26 @@ function drawSkillAssistEffects(ctx, now) {
     ctx.globalCompositeOperation = 'screen';
     magnetMergeLinks.forEach((link, index) => {
       const pulse = 0.72 + Math.sin(now * 0.01 + index) * 0.28;
-      const glow = clamp(0.45 + link.strength * 0.7, 0.45, 1);
+      const glow = clamp(0.32 + link.strength * 0.46, 0.32, 0.72);
       const flow = (now * 0.004 + index * 0.37) % 1;
       const sparkX = link.ax + (link.bx - link.ax) * flow;
       const sparkY = link.ay + (link.by - link.ay) * flow;
-      const ringPulse = 1 + pulse * 0.16;
 
-      ctx.globalAlpha = 0.42 * glow;
+      ctx.globalAlpha = 0.2 * glow;
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 8 + link.strength * 7;
+      ctx.lineWidth = 4 + link.strength * 3;
       ctx.shadowColor = '#35d7ff';
-      ctx.shadowBlur = 26;
+      ctx.shadowBlur = 10;
       ctx.beginPath();
       ctx.moveTo(link.ax, link.ay);
       ctx.lineTo(link.bx, link.by);
       ctx.stroke();
 
-      ctx.globalAlpha = 0.9 * glow;
+      ctx.globalAlpha = 0.58 * glow;
       ctx.strokeStyle = '#35d7ff';
-      ctx.lineWidth = 3 + link.strength * 4;
-      ctx.shadowBlur = 18;
-      ctx.setLineDash([12, 9]);
+      ctx.lineWidth = 2 + link.strength * 2;
+      ctx.shadowBlur = 8;
+      ctx.setLineDash([10, 12]);
       ctx.lineDashOffset = -now * 0.06;
       ctx.beginPath();
       ctx.moveTo(link.ax, link.ay);
@@ -579,23 +578,12 @@ function drawSkillAssistEffects(ctx, now) {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      ctx.globalAlpha = 0.82 * pulse;
+      ctx.globalAlpha = 0.48 * pulse;
       ctx.fillStyle = '#ffffff';
-      ctx.shadowBlur = 22;
+      ctx.shadowBlur = 8;
       ctx.beginPath();
-      ctx.arc(sparkX, sparkY, 4 + link.strength * 5, 0, Math.PI * 2);
+      ctx.arc(sparkX, sparkY, 2 + link.strength * 3, 0, Math.PI * 2);
       ctx.fill();
-
-      ctx.globalAlpha = 0.58 * glow;
-      ctx.strokeStyle = '#35d7ff';
-      ctx.lineWidth = 3;
-      ctx.shadowBlur = 20;
-      ctx.beginPath();
-      ctx.arc(link.ax, link.ay, (link.ar || 22) * ringPulse + 9, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(link.bx, link.by, (link.br || 22) * ringPulse + 9, 0, Math.PI * 2);
-      ctx.stroke();
     });
     ctx.restore();
   }

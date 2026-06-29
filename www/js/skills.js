@@ -730,7 +730,7 @@ function updateMagnetMerge(now = performance.now()) {
       const fy = dy / distance * force;
       Body.applyForce(a, a.position, { x: fx * a.mass, y: fy * a.mass });
       Body.applyForce(b, b.position, { x: -fx * b.mass, y: -fy * b.mass });
-      if (magnetMergeLinks.length < 18) {
+      if (magnetMergeLinks.length < 8) {
         magnetMergeLinks.push({
           ax: a.position.x,
           ay: a.position.y,
