@@ -54,7 +54,11 @@ button {
     radial-gradient(circle at 84% 18%, rgba(84, 214, 201, 0.16), transparent 23%),
     radial-gradient(circle at 12% 84%, rgba(104, 216, 77, 0.24), transparent 28%),
     linear-gradient(180deg, #fbfff2 0%, #e9f7d4 55%, #d4ecb4 100%);
-  padding: calc(max(8px, env(safe-area-inset-top)) + var(--hud-offset)) 8px max(8px, env(safe-area-inset-bottom));
+  padding:
+    calc(max(8px, env(safe-area-inset-top)) + var(--hud-offset))
+    max(8px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
 }
 
 .app-shell::before {
@@ -340,7 +344,7 @@ button {
   left: 50%;
   top: max(10px, env(safe-area-inset-top));
   z-index: 5;
-  width: min(calc(100vw - 24px), 452px);
+  width: min(calc(100vw - max(24px, env(safe-area-inset-left) + env(safe-area-inset-right) + 16px)), 452px);
   transform: translateX(-50%);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto auto;
@@ -1211,7 +1215,11 @@ button {
   align-content: center;
   grid-template-columns: minmax(0, 1fr);
   gap: clamp(9px, 1.4vh, 14px);
-  padding: max(14px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+  padding:
+    max(14px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
   overflow-y: auto;
   overflow-x: hidden;
   background:
@@ -1553,7 +1561,11 @@ button {
   z-index: 30;
   display: grid;
   place-items: center;
-  padding: max(18px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
+  padding:
+    max(18px, env(safe-area-inset-top))
+    max(14px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    max(14px, env(safe-area-inset-left));
   background:
     radial-gradient(circle at 50% 24%, rgba(255, 218, 79, 0.38), transparent 28%),
     radial-gradient(circle at 18% 82%, rgba(104, 216, 77, 0.22), transparent 30%),
