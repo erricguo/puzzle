@@ -23,5 +23,8 @@
     "@capacitor/cli": "^8.4.1",
     "@capacitor/core": "^8.4.1",
     "@capawesome/capacitor-google-sign-in": "^0.1.2"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
   }
 }

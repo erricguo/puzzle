@@ -1257,6 +1257,24 @@ button {
   pointer-events: none;
 }
 
+.language-select {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  z-index: 40;
+  width: 74px;
+  min-height: 38px;
+  padding: 7px 6px;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff8ca 0%, #ffd84d 100%);
+  box-shadow: 0 4px 0 #c89b20, 0 8px 12px rgba(99, 74, 20, 0.12);
+  color: #553911;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .start-art {
   position: relative;
   z-index: 1;
@@ -1673,9 +1691,9 @@ button {
 }
 
 .account-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   padding: 12px;
   border: 2px solid rgba(255, 255, 255, 0.8);
@@ -1783,8 +1801,8 @@ button {
 
 .leaderboard-item {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-template-columns: 34px minmax(0, 1fr) minmax(86px, 30%);
+  gap: 8px;
   align-items: center;
   padding: 10px;
   border: 2px solid rgba(255, 255, 255, 0.72);
@@ -1851,7 +1869,7 @@ button {
 .leaderboard-item .metric {
   display: grid;
   justify-items: end;
-  min-width: 64px;
+  min-width: 0;
   color: #20311e;
   font-weight: 900;
   line-height: 1;
@@ -1859,18 +1877,21 @@ button {
 
 .leaderboard-item .metric b {
   color: #20311e;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 900;
+  line-height: 1.05;
+  white-space: nowrap;
 }
 
 .leaderboard-item .metric small {
   margin-left: 2px;
+  font-size: 10px;
 }
 
 .leaderboard-item .metric em {
-  margin-top: 4px;
+  margin-top: 3px;
   color: #3d802f;
-  font-size: 11px;
+  font-size: 10px;
   font-style: normal;
   font-weight: 900;
 }
@@ -2683,5 +2704,15 @@ button {
 
   .skill-card {
     min-height: 126px;
+  }
+
+  .leaderboard-item {
+    grid-template-columns: 32px minmax(0, 1fr) minmax(76px, 28%);
+    gap: 7px;
+    padding: 9px 8px;
+  }
+
+  .leaderboard-item .metric b {
+    font-size: 17px;
   }
 }

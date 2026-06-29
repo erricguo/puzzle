@@ -25,7 +25,8 @@ function togglePause() {
 
 function createWallBodies() {
   const thickness = 80;
-  walls.floor = Bodies.rectangle(state.width / 2, state.height + thickness / 2, state.width, thickness, {
+  const floorInset = 24;
+  walls.floor = Bodies.rectangle(state.width / 2, state.height - floorInset + thickness / 2, state.width, thickness, {
     isStatic: true,
     label: 'wall',
     collisionFilter: { category: 0x0002, mask: 0xffffffff },

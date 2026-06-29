@@ -1,7 +1,7 @@
 function setupAudioUi() {
   musicVolumeSlider.value = Math.round(audioState.musicVolume * 100);
   sfxVolumeSlider.value = Math.round(audioState.sfxVolume * 100);
-  soundButton.textContent = audioState.enabled ? '音效' : '靜音';
+  soundButton.textContent = i18nTranslateText(audioState.enabled ? '音效' : '靜音');
   soundButton.classList.toggle('muted', !audioState.enabled);
   updateSliderFill(musicVolumeSlider);
   updateSliderFill(sfxVolumeSlider);
@@ -100,7 +100,7 @@ function updateAudioVolume() {
   if (audioState.sfxGain) {
     audioState.sfxGain.gain.setTargetAtTime(audioState.sfxVolume, audioState.context.currentTime, 0.025);
   }
-  soundButton.textContent = audioState.enabled ? '音效' : '靜音';
+  soundButton.textContent = i18nTranslateText(audioState.enabled ? '音效' : '靜音');
   soundButton.classList.toggle('muted', !audioState.enabled);
   updateSliderFill(musicVolumeSlider);
   updateSliderFill(sfxVolumeSlider);
@@ -118,7 +118,7 @@ function updateSliderFill(slider) {
 function updateHapticsUi() {
   vibrationToggle.classList.toggle('active', hapticsState.enabled);
   vibrationToggle.setAttribute('aria-checked', String(hapticsState.enabled));
-  vibrationToggle.setAttribute('aria-label', hapticsState.enabled ? '關閉震動效果' : '開啟震動效果');
+  vibrationToggle.setAttribute('aria-label', i18nTranslateText(hapticsState.enabled ? '關閉震動效果' : '開啟震動效果'));
   queuePlayerProgressSync?.();
 }
 

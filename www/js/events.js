@@ -89,7 +89,10 @@ debugCoinButton.addEventListener('click', () => {
   playClickSound();
 });
 startButton.addEventListener('click', startGame);
-startScene.addEventListener('click', startGame);
+languageSelect?.addEventListener('pointerdown', (event) => event.stopPropagation());
+languageSelect?.addEventListener('pointerup', (event) => event.stopPropagation());
+languageSelect?.addEventListener('click', (event) => event.stopPropagation());
+languageSelect?.addEventListener('change', (event) => event.stopPropagation());
 bombButton.addEventListener('click', (event) => {
   event.stopPropagation();
   activateBombTargeting();
@@ -176,6 +179,18 @@ vibrationToggle.addEventListener('click', () => {
 playAgainButton.addEventListener('click', playAgainFromGameOver);
 window.addEventListener('resize', resizeGame);
 window.addEventListener('orientationchange', () => setTimeout(resizeGame, 250));
+window.addEventListener('languagechange', () => {
+  updateHud();
+  updateNextLabelStatus();
+  updateAudioVolume();
+  updateHapticsUi();
+  updateRefreshSkillButton();
+  if (dailyScene && !dailyScene.hidden) renderDailyMissions();
+  if (talentScene && !talentScene.hidden) setShopTab(activeShopTab);
+  if (encyclopediaScene && !encyclopediaScene.hidden) renderEncyclopedia();
+  if (leaderboardScene && !leaderboardScene.hidden) renderLeaderboard();
+  translatePage?.();
+});
 document.addEventListener('visibilitychange', updatePageAudioState);
 window.addEventListener('pagehide', () => {
   state.pageActive = false;

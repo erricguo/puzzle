@@ -72,6 +72,58 @@ function clearGuestSessionSnapshot() {
   localStorage.removeItem(GUEST_SESSION_STORAGE_KEY);
 }
 
+function formatGuestDisplayName(name = leaderboardState.playerName) {
+  const displayName = String(name || '').trim();
+  if (!displayName) return 'Guest';
+  return /^guest\b/i.test(displayName) ? displayName : `Guest ${displayName}`;
+}
+
+function currentAccountDisplayName() {
+  if (!leaderboardState.playerName) return 'Connecting to Supabase...';
+  return leaderboardState.user?.is_anonymous
+    ? formatGuestDisplayName(leaderboardState.playerName)
+    : leaderboardState.playerName;
+}
+
+function refreshAccountStatusName() {
+  accountStatusEl.textContent = currentAccountDisplayName();
+}
+
+function logAuthMessage(message, error = null) {
+  if (error) {
+    console.log(message, error);
+    return;
+  }
+  console.log(message);
+}
+
+function isAuthStatusMessage(message) {
+  const text = String(message || '');
+  return /Google|Anonymous sign-in|Supabase (session|load)|登入|登出|餃|正在|甇/.test(text);
+}
+
+function setupAuthMessageConsoleRedirect() {
+  if (!accountStatusEl || accountStatusEl.dataset.authRedirectReady) return;
+  accountStatusEl.dataset.authRedirectReady = 'true';
+
+  const observer = new MutationObserver(() => {
+    if (!isAuthStatusMessage(accountStatusEl.textContent)) return;
+    logAuthMessage(accountStatusEl.textContent);
+    refreshAccountStatusName();
+  });
+  observer.observe(accountStatusEl, { childList: true, characterData: true, subtree: true });
+
+  if (leaderboardMessageEl && !leaderboardMessageEl.dataset.authRedirectReady) {
+    leaderboardMessageEl.dataset.authRedirectReady = 'true';
+    const messageObserver = new MutationObserver(() => {
+      if (!isAuthStatusMessage(leaderboardMessageEl.textContent)) return;
+      logAuthMessage(leaderboardMessageEl.textContent);
+      leaderboardMessageEl.textContent = '';
+    });
+    messageObserver.observe(leaderboardMessageEl, { childList: true, characterData: true, subtree: true });
+  }
+}
+
 function setSupabaseGateReady(ready) {
   leaderboardState.isIdentityReady = ready;
   [
@@ -86,6 +138,7 @@ function setSupabaseGateReady(ready) {
 }
 
 function setupSupabase() {
+  setupAuthMessageConsoleRedirect();
   clearLegacyLocalGameData();
   const config = window.SUPABASE_CONFIG || {};
   const canCreateClient = Boolean(window.supabase?.createClient);
@@ -160,7 +213,7 @@ async function syncSupabaseUser() {
   const { data: sessionData, error: sessionError } = await leaderboardState.client.auth.getSession();
   if (sessionError) {
     setSupabaseGateReady(false);
-    leaderboardMessageEl.textContent = `Supabase session failed: ${sessionError.message}`;
+    logAuthMessage(`Supabase session failed: ${sessionError.message}`, sessionError);
     return;
   }
 
@@ -175,8 +228,8 @@ async function syncSupabaseUser() {
   const { data, error } = await leaderboardState.client.auth.signInAnonymously();
   if (error) {
     setSupabaseGateReady(false);
-    accountStatusEl.textContent = `Anonymous sign-in failed: ${error.message}`;
-    leaderboardMessageEl.textContent = 'Supabase anonymous auth must be enabled.';
+    refreshAccountStatusName();
+    logAuthMessage(`Anonymous sign-in failed: ${error.message}`, error);
     googleSignInButton.disabled = false;
     return;
   }
@@ -207,8 +260,8 @@ async function restoreGuestSessionOrCreateNew() {
   const { data, error } = await leaderboardState.client.auth.signInAnonymously();
   if (error) {
     setSupabaseGateReady(false);
-    accountStatusEl.textContent = `Anonymous sign-in failed: ${error.message}`;
-    leaderboardMessageEl.textContent = 'Supabase anonymous auth must be enabled.';
+    refreshAccountStatusName();
+    logAuthMessage(`Anonymous sign-in failed: ${error.message}`, error);
     googleSignInButton.disabled = false;
     return false;
   }
@@ -239,9 +292,8 @@ async function applySupabaseUser(user) {
   if (user.is_anonymous) {
     leaderboardState.guestPlayerId = user.id;
   }
-  accountStatusEl.textContent = user.is_anonymous
-    ? `Loading guest: ${leaderboardState.playerName}`
-    : `Loading ${leaderboardState.playerName}`;
+  refreshAccountStatusName();
+  leaderboardMessageEl.textContent = `正在載入 ${currentAccountDisplayName()} 的資料...`;
   googleSignInButton.textContent = user.is_anonymous ? 'Google 登入' : '登出';
   googleSignInButton.disabled = true;
 
@@ -256,7 +308,8 @@ async function applySupabaseUser(user) {
   } catch (error) {
     console.warn('Supabase progress load failed', error);
     if (syncToken === leaderboardState.identitySyncToken && leaderboardState.user?.id === user.id) {
-      accountStatusEl.textContent = `Supabase load failed: ${error.message}`;
+      refreshAccountStatusName();
+      logAuthMessage(`Supabase load failed: ${error.message}`, error);
       googleSignInButton.disabled = false;
       setSupabaseGateReady(false);
     }
@@ -264,7 +317,7 @@ async function applySupabaseUser(user) {
   }
 
   if (syncToken !== leaderboardState.identitySyncToken || leaderboardState.user?.id !== user.id) return;
-  accountStatusEl.textContent = user.is_anonymous ? `Guest: ${leaderboardState.playerName}` : leaderboardState.playerName;
+  refreshAccountStatusName();
   googleSignInButton.disabled = false;
   setSupabaseGateReady(true);
 }

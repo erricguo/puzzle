@@ -11,21 +11,21 @@ function updateNextLabelStatus() {
       ? `肥料剩餘: ${state.fertilizerCharges}`
       : '';
   nextLabelEl.hidden = !statusText;
-  nextLabelEl.textContent = statusText;
+  nextLabelEl.textContent = i18nTranslateText(statusText);
 }
 
 function updateHud() {
-  scoreEl.textContent = `分數 ${state.score}`;
-  bestLevelEl.textContent = `最高 Combo ${state.bestCombo}`;
+  scoreEl.textContent = i18nTranslateText(`分數 ${state.score}`);
+  bestLevelEl.textContent = i18nTranslateText(`最高 Combo ${state.bestCombo}`);
   playerLevelEl.textContent = `Lv ${state.playerLevel} ${state.exp}/${state.expToNext}`;
   expFillEl.style.width = `${clamp((state.exp / state.expToNext) * 100, 0, 100)}%`;
-  finalScoreEl.textContent = `分數 ${state.score}`;
-  finalComboEl.textContent = `最高 Combo ${state.bestCombo}`;
+  finalScoreEl.textContent = i18nTranslateText(`分數 ${state.score}`);
+  finalComboEl.textContent = i18nTranslateText(`最高 Combo ${state.bestCombo}`);
   const bombUsesRemaining = Math.max(0, BOMB_USES_PER_RUN - state.bombsUsedThisRun);
   bombButton.hidden = state.bombs <= 0;
   bombButton.disabled = state.bombs <= 0 || bombUsesRemaining <= 0 || !state.hasStarted || state.gameOver || state.paused;
   bombButton.classList.toggle('active', state.bombTargeting);
-  bombButton.textContent = state.bombTargeting ? '選蔬菜' : `炸彈 ${bombUsesRemaining}/3`;
+  bombButton.textContent = i18nTranslateText(state.bombTargeting ? '選蔬菜' : `炸彈 ${bombUsesRemaining}/3`);
 }
 
 function comboDurationFor(combo) {
