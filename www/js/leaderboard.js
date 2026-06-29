@@ -687,7 +687,6 @@ function renderLeaderboard() {
   const boardLabel = boardType === 'item' ? '道具榜' : '經典榜';
   const recentMatchesBoard = leaderboardState.recentScoreRow
     && normalizeLeaderboardRow(leaderboardState.recentScoreRow).board_type === boardType;
-  const currentPlayerTopRow = rows.find((row) => isCurrentPlayerLeaderboardRow(row, boardType));
   let recentItem = null;
 
   leaderboardListEl.replaceChildren();
@@ -697,7 +696,7 @@ function renderLeaderboard() {
   rows.forEach((row, index) => {
     const item = document.createElement('li');
     const isRecent = isRecentScoreRow(row);
-    const isCurrentPlayer = currentPlayerTopRow === row || isRecent;
+    const isCurrentPlayer = isCurrentPlayerLeaderboardRow(row, boardType);
     const displayName = isCurrentPlayer
       ? currentAccountDisplayName()
       : row.player_name || '訪客玩家';
