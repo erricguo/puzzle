@@ -21,6 +21,7 @@ const state = {
   coins: loadPlayerCoins(),
   reviveTickets: loadReviveTickets(),
   bombs: loadBombs(),
+  selectedSkin: loadSelectedSkin(),
   bombsUsedThisRun: 0,
   ownedTalents: loadOwnedTalents(),
   bestLevel: 1,

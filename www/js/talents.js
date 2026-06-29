@@ -291,20 +291,28 @@ function itemShopSummary() {
 }
 
 function setShopTab(tab = activeShopTab) {
-  activeShopTab = tab === 'item' ? 'item' : 'talent';
+  activeShopTab = ['item', 'skin'].includes(tab) ? tab : 'talent';
   const isTalentTab = activeShopTab === 'talent';
+  const isItemTab = activeShopTab === 'item';
+  const isSkinTab = activeShopTab === 'skin';
   talentShopTabButton.classList.toggle('active', isTalentTab);
-  itemShopTabButton.classList.toggle('active', !isTalentTab);
+  itemShopTabButton.classList.toggle('active', isItemTab);
+  skinShopTabButton?.classList.toggle('active', isSkinTab);
   talentListEl.hidden = !isTalentTab;
-  itemListEl.hidden = isTalentTab;
+  itemListEl.hidden = !isItemTab;
+  if (skinListEl) skinListEl.hidden = !isSkinTab;
   document.querySelector('.talent-note').textContent = isTalentTab
     ? '已購買的天賦會在每局開始時自動生效。'
-    : '道具會存入背包，遊戲中符合條件時即可使用。';
+    : isItemTab
+      ? '道具會存入背包，遊戲中符合條件時即可使用。'
+      : '皮膚會套用在主遊戲畫面，並同步到你的帳號。';
 
   if (isTalentTab) {
     renderTalentShop();
-  } else {
+  } else if (isItemTab) {
     renderItemShop();
+  } else {
+    renderSkinShop?.();
   }
 }
 

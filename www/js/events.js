@@ -125,6 +125,7 @@ talentScene.addEventListener('click', (event) => event.stopPropagation());
 closeTalentButton.addEventListener('click', closeTalentShop);
 talentShopTabButton.addEventListener('click', () => setShopTab('talent'));
 itemShopTabButton.addEventListener('click', () => setShopTab('item'));
+skinShopTabButton?.addEventListener('click', () => setShopTab('skin'));
 encyclopediaScene.addEventListener('click', (event) => event.stopPropagation());
 closeEncyclopediaButton.addEventListener('click', closeEncyclopedia);
 leaderboardHomeButton.addEventListener('click', returnToStartScene);

@@ -28,6 +28,7 @@ alter table public.vegetable_merge_scores enable row level security;
 
 grant select on public.vegetable_merge_scores to anon, authenticated;
 grant insert on public.vegetable_merge_scores to authenticated;
+grant update on public.vegetable_merge_scores to authenticated;
 
 drop policy if exists "Anyone can read vegetable leaderboard" on public.vegetable_merge_scores;
 create policy "Anyone can read vegetable leaderboard"
@@ -41,6 +42,22 @@ create policy "Players can submit vegetable scores"
   on public.vegetable_merge_scores
   for insert
   to authenticated
+  with check (
+    auth.uid()::text = player_id
+    and
+    score >= 0
+    and best_combo >= 0
+    and best_level between 1 and 10
+    and board_type in ('classic', 'item')
+    and length(player_name) between 1 and 40
+  );
+
+drop policy if exists "Players can update their own vegetable scores" on public.vegetable_merge_scores;
+create policy "Players can update their own vegetable scores"
+  on public.vegetable_merge_scores
+  for update
+  to authenticated
+  using (auth.uid()::text = player_id)
   with check (
     auth.uid()::text = player_id
     and
@@ -85,6 +102,7 @@ create table if not exists public.vegetable_player_progress (
   owned_talents text[] not null default '{}',
   revive_tickets integer not null default 0 check (revive_tickets >= 0),
   bombs integer not null default 0 check (bombs >= 0),
+  selected_skin text not null default 'garden',
   daily_missions jsonb not null default '{}'::jsonb,
   audio_settings jsonb not null default '{}'::jsonb,
   local_leaderboard jsonb not null default '[]'::jsonb,
@@ -96,6 +114,7 @@ create table if not exists public.vegetable_player_progress (
 alter table public.vegetable_player_progress
   add column if not exists revive_tickets integer not null default 0 check (revive_tickets >= 0),
   add column if not exists bombs integer not null default 0 check (bombs >= 0),
+  add column if not exists selected_skin text not null default 'garden',
   add column if not exists daily_missions jsonb not null default '{}'::jsonb,
   add column if not exists audio_settings jsonb not null default '{}'::jsonb,
   add column if not exists local_leaderboard jsonb not null default '[]'::jsonb,

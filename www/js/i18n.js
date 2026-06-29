@@ -72,10 +72,20 @@ const I18N_EN_TEXT = {
   '商城分頁': 'Shop tabs',
   '天賦商店': 'Talent Shop',
   '道具商店': 'Item Shop',
+  '皮膚': 'Skins',
   '天賦列表': 'Talent list',
   '道具列表': 'Item list',
+  '皮膚列表': 'Skin list',
   '已購買的天賦會在每局開始時自動生效。': 'Purchased talents activate automatically at the start of each run.',
   '道具會存入背包，遊戲中符合條件時即可使用。': 'Items are stored and can be used in game when available.',
+  '皮膚會套用在主遊戲畫面，並同步到你的帳號。': 'Skins apply to the main game screen and sync to your account.',
+  '選擇主遊戲畫面皮膚': 'Choose a main game skin',
+  '套用': 'Apply',
+  '套用中': 'Applied',
+  '經典': 'Classic',
+  '暖色': 'Warm',
+  '霓虹': 'Neon',
+  '冰藍': 'Frost',
   '已解鎖 1/10': 'Unlocked 1/10',
   '關閉蔬菜圖鑑': 'Close Veggiepedia',
   '最高合成：1 層 豌豆': 'Best merge: Lv. 1 Pea',
@@ -256,6 +266,12 @@ const I18N_DATA_EN = {
   items: {
     bomb: ['Bomb', 'Use in game to choose a veggie and blast nearby veggies.', 'Targeted blast'],
     revive_ticket: ['Revive Ticket', 'Use at game over to clear the top 30 veggies and continue.', 'Stacks in inventory']
+  },
+  skins: {
+    garden: ['Morning Garden', 'Fresh green theme for the original veggie merge feel.', 'Classic'],
+    sunset: ['Sunset Farm', 'Warm orange-red colors with a harvest mood.', 'Warm'],
+    midnight: ['Neon Night Market', 'Dark neon style that makes veggies and combos pop.', 'Neon'],
+    frost: ['Frost Greenhouse', 'Cool glasshouse colors, bright and clean.', 'Frost']
   },
   skills: {
     fast_fall: ['Fast Fall', 'For 5 seconds, veggies fall 50% faster and drop cadence increases by 30%.'],
@@ -478,6 +494,14 @@ function captureOriginalDataTranslations() {
     });
   }
 
+  if (typeof SKIN_DEFS !== 'undefined') {
+    SKIN_DEFS.forEach((skin) => {
+      skin.nameZh = skin.nameZh || skin.name;
+      skin.summaryZh = skin.summaryZh || skin.summary;
+      skin.effectZh = skin.effectZh || skin.effect;
+    });
+  }
+
   if (typeof SKILL_POOL !== 'undefined') {
     SKILL_POOL.forEach((skill) => {
       skill.nameZh = skill.nameZh || skill.name;
@@ -533,6 +557,15 @@ function applyDataTranslations() {
       item.name = i18nCurrentLanguage === 'en' ? translated?.[0] || item.name : item.nameZh || item.name;
       item.summary = i18nCurrentLanguage === 'en' ? translated?.[1] || item.summary : item.summaryZh || item.summary;
       item.effect = i18nCurrentLanguage === 'en' ? translated?.[2] || item.effect : item.effectZh || item.effect;
+    });
+  }
+
+  if (typeof SKIN_DEFS !== 'undefined') {
+    SKIN_DEFS.forEach((skin) => {
+      const translated = I18N_DATA_EN.skins[skin.id];
+      skin.name = i18nCurrentLanguage === 'en' ? translated?.[0] || skin.name : skin.nameZh || skin.name;
+      skin.summary = i18nCurrentLanguage === 'en' ? translated?.[1] || skin.summary : skin.summaryZh || skin.summary;
+      skin.effect = i18nCurrentLanguage === 'en' ? translated?.[2] || skin.effect : skin.effectZh || skin.effect;
     });
   }
 

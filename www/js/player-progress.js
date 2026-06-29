@@ -59,6 +59,7 @@ function resetProgressForIdentityLoad() {
   state.ownedTalents = [];
   state.reviveTickets = STARTING_REVIVE_TICKETS;
   state.bombs = 0;
+  state.selectedSkin = 'garden';
   state.dailyMissionState = {};
   state.encyclopediaUnlockedLevels = [0];
   leaderboardState.localRows = [];
@@ -68,6 +69,7 @@ function resetProgressForIdentityLoad() {
   leaderboardState.recentScoreRank = null;
   updateCoinUi?.();
   updateHud?.();
+  applySelectedSkin?.(state.selectedSkin, { persist: false });
 }
 
 async function persistPlayerProgressToSupabase() {
@@ -93,6 +95,7 @@ async function persistPlayerProgressToSupabase() {
       owned_talents: normalizeTalentIds(state.ownedTalents),
       revive_tickets: normalizeProgressInteger(state.reviveTickets),
       bombs: normalizeProgressInteger(state.bombs),
+      selected_skin: normalizeSkinId?.(state.selectedSkin) || 'garden',
       daily_missions: normalizeDailyMissionPayload(state.dailyMissionState),
       audio_settings: currentAudioSettings(),
       ...guestIdentity,
@@ -121,7 +124,7 @@ async function syncPlayerProgressForCurrentUser(syncToken = leaderboardState.ide
 
   const { data, error } = await client
     .from(PLAYER_PROGRESS_TABLE)
-    .select('coins, owned_talents, revive_tickets, bombs, daily_missions, audio_settings, guest_player_id, guest_player_name')
+    .select('coins, owned_talents, revive_tickets, bombs, selected_skin, daily_missions, audio_settings, guest_player_id, guest_player_name')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -140,6 +143,8 @@ async function syncPlayerProgressForCurrentUser(syncToken = leaderboardState.ide
   state.ownedTalents = normalizeTalentIds(Array.isArray(data?.owned_talents) ? data.owned_talents : []);
   state.reviveTickets = data ? normalizeProgressInteger(data?.revive_tickets) : STARTING_REVIVE_TICKETS;
   state.bombs = normalizeProgressInteger(data?.bombs);
+  state.selectedSkin = normalizeSkinId?.(data?.selected_skin) || state.selectedSkin || 'garden';
+  applySelectedSkin?.(state.selectedSkin, { persist: false });
   state.dailyMissionState = normalizeDailyMissionPayload(data?.daily_missions);
   if (remoteSettings) {
     audioState.enabled = remoteSettings.soundEnabled;

@@ -122,8 +122,20 @@ function updateHapticsUi() {
   queuePlayerProgressSync?.();
 }
 
-function vibrate(pattern) {
+async function vibrate(pattern) {
   if (!hapticsState.enabled) return;
+  const Haptics = window.Capacitor?.Plugins?.Haptics;
+  if (Haptics && window.Capacitor?.getPlatform?.() !== 'web') {
+    try {
+      const duration = Array.isArray(pattern)
+        ? pattern.reduce((total, value, index) => total + (index % 2 === 0 ? Number(value) || 0 : 0), 0)
+        : Number(pattern) || 0;
+      await Haptics.vibrate({ duration: clamp(duration, 1, 400) });
+      return;
+    } catch (error) {
+      console.warn('Native haptics failed, falling back to Web Vibration API', error);
+    }
+  }
   navigator.vibrate?.(pattern);
 }
 

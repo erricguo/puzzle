@@ -85,6 +85,36 @@ function currentAccountDisplayName() {
     : leaderboardState.playerName;
 }
 
+function normalizeLeaderboardPlayerName(name) {
+  const normalized = String(name || '').trim().replace(/\s+/g, ' ');
+  return (normalized || 'Guest').slice(0, 40);
+}
+
+async function ensureLeaderboardSubmitIdentity() {
+  if (!leaderboardState.client) return false;
+  if (!leaderboardState.user) {
+    await restoreGuestSessionOrCreateNew();
+  }
+  const user = leaderboardState.user;
+  if (!user) return false;
+
+  leaderboardState.playerId = user.id;
+  if (user.is_anonymous) {
+    leaderboardState.guestPlayerId = user.id;
+    leaderboardState.guestPlayerName = leaderboardState.guestPlayerName || createGuestDisplayName();
+    leaderboardState.playerName = leaderboardState.guestPlayerName;
+    try {
+      await persistPlayerProgressToSupabase?.();
+    } catch (error) {
+      console.warn('Guest identity progress save failed before leaderboard submit', error);
+    }
+  } else {
+    leaderboardState.playerName = getSupabaseDisplayName(user);
+  }
+  refreshAccountStatusName();
+  return true;
+}
+
 function refreshAccountStatusName() {
   accountStatusEl.textContent = currentAccountDisplayName();
 }
@@ -475,16 +505,22 @@ async function signInWithGoogle() {
 async function submitLeaderboardScore() {
   if (state.scoreSaved) return leaderboardState.recentScoreRow;
   if (state.score <= 0 || state.bestCombo <= 0) return null;
-  if (!leaderboardState.client || !leaderboardState.user) {
+  if (!leaderboardState.client || !await ensureLeaderboardSubmitIdentity()) {
     leaderboardMessageEl.textContent = 'Supabase is not ready. Score was not submitted.';
     return null;
   }
   state.scoreSaved = true;
 
+  const playerName = normalizeLeaderboardPlayerName(
+    leaderboardState.user?.is_anonymous
+      ? formatGuestDisplayName(leaderboardState.playerName)
+      : leaderboardState.playerName
+  );
+
   const row = {
     local_id: `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     player_id: leaderboardState.playerId,
-    player_name: leaderboardState.playerName,
+    player_name: playerName,
     score: state.score,
     best_combo: state.bestCombo,
     best_level: state.bestLevel,
@@ -492,18 +528,60 @@ async function submitLeaderboardScore() {
     created_at: new Date().toISOString()
   };
 
-  const { data, error } = await leaderboardState.client
+  const existingResult = await leaderboardState.client
     .from('vegetable_merge_scores')
-    .insert({
-      player_id: row.player_id,
-      player_name: row.player_name,
-      score: row.score,
-      best_combo: row.best_combo,
-      best_level: row.best_level,
-      board_type: row.board_type
-    })
     .select('id, player_id, player_name, score, best_combo, best_level, board_type, created_at')
-    .single();
+    .eq('player_id', row.player_id)
+    .eq('board_type', row.board_type)
+    .order('score', { ascending: false })
+    .order('best_combo', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingResult.error) {
+    leaderboardMessageEl.textContent = `送出失敗: ${existingResult.error.message}`;
+    state.scoreSaved = false;
+    return null;
+  }
+
+  const existingRow = existingResult.data ? normalizeLeaderboardRow(existingResult.data) : null;
+  const shouldUpdateExisting = existingRow && (
+    row.score > existingRow.score ||
+    (row.score === existingRow.score && row.best_combo > existingRow.best_combo)
+  );
+  const shouldKeepExisting = existingRow && !shouldUpdateExisting;
+
+  let data = null;
+  let error = null;
+  if (shouldKeepExisting) {
+    data = existingRow;
+  } else if (shouldUpdateExisting) {
+    ({ data, error } = await leaderboardState.client
+      .from('vegetable_merge_scores')
+      .update({
+        player_name: row.player_name,
+        score: row.score,
+        best_combo: row.best_combo,
+        best_level: row.best_level,
+        created_at: row.created_at
+      })
+      .eq('id', existingRow.id)
+      .select('id, player_id, player_name, score, best_combo, best_level, board_type, created_at')
+      .single());
+  } else {
+    ({ data, error } = await leaderboardState.client
+      .from('vegetable_merge_scores')
+      .insert({
+        player_id: row.player_id,
+        player_name: row.player_name,
+        score: row.score,
+        best_combo: row.best_combo,
+        best_level: row.best_level,
+        board_type: row.board_type
+      })
+      .select('id, player_id, player_name, score, best_combo, best_level, board_type, created_at')
+      .single());
+  }
 
   if (!error && data) {
     Object.assign(row, data);
@@ -515,6 +593,14 @@ async function submitLeaderboardScore() {
   }
 
   if (error) {
+    console.warn('Leaderboard score submit failed', {
+      error,
+      playerId: row.player_id,
+      playerName: row.player_name,
+      userId: leaderboardState.user?.id,
+      isAnonymous: leaderboardState.user?.is_anonymous,
+      boardType: row.board_type
+    });
     leaderboardMessageEl.textContent = `送出失敗: ${error.message}`;
     state.scoreSaved = false;
     return null;
@@ -601,6 +687,7 @@ function renderLeaderboard() {
   const boardLabel = boardType === 'item' ? '道具榜' : '經典榜';
   const recentMatchesBoard = leaderboardState.recentScoreRow
     && normalizeLeaderboardRow(leaderboardState.recentScoreRow).board_type === boardType;
+  const currentPlayerTopRow = rows.find((row) => isCurrentPlayerLeaderboardRow(row, boardType));
   let recentItem = null;
 
   leaderboardListEl.replaceChildren();
@@ -610,13 +697,16 @@ function renderLeaderboard() {
   rows.forEach((row, index) => {
     const item = document.createElement('li');
     const isRecent = isRecentScoreRow(row);
-    const isCurrentPlayer = isCurrentPlayerLeaderboardRow(row, boardType);
+    const isCurrentPlayer = currentPlayerTopRow === row || isRecent;
+    const displayName = isCurrentPlayer
+      ? currentAccountDisplayName()
+      : row.player_name || '訪客玩家';
     item.className = `leaderboard-item${isRecent || isCurrentPlayer ? ' recent' : ''}`;
     const detailText = `${formatDate(row.created_at)}`;
     item.innerHTML = `
       <span class="rank">${index + 1}</span>
       <span class="player">
-        <strong>${escapeHtml(row.player_name || '訪客玩家')}</strong>
+        <strong>${escapeHtml(displayName)}</strong>
         <small>${escapeHtml(detailText)}</small>
       </span>
       <span class="metric">

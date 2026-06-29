@@ -864,18 +864,6 @@ function drawGameOverlay() {
   ctx.fillRect(0, 0, state.width, state.height);
 
   ctx.save();
-  ctx.globalAlpha = 0.18;
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 1;
-  for (let y = state.dangerY + 36; y < state.height; y += 56) {
-    ctx.beginPath();
-    ctx.moveTo(16, y);
-    ctx.lineTo(state.width - 16, y);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  ctx.save();
   ctx.globalAlpha = 0.12;
   ctx.fillStyle = '#315d29';
   ctx.beginPath();
