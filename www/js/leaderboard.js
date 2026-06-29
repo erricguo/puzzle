@@ -714,7 +714,7 @@ function renderLeaderboard() {
       </span>
     `;
     if (isRecent || isCurrentPlayer) {
-      item.querySelector('.player strong')?.insertAdjacentHTML('beforeend', `<span class="recent-label">${isRecent ? '本局' : '我的'}</span>`);
+      item.querySelector('.player strong')?.insertAdjacentHTML('beforeend', '<span class="recent-label">我的</span>');
       recentItem = item;
     }
     leaderboardListEl.appendChild(item);

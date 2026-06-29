@@ -221,6 +221,7 @@ function maybeShowSkillPanel() {
   state.pendingSkillChoices -= 1;
   state.isChoosingSkill = true;
   state.skillChoicesUnlockAt = performance.now() + SKILL_CHOICE_UNLOCK_DELAY;
+  clearExpiredCombo();
   state.paused = true;
   pauseEnvironmentEvents();
   cancelAiming();
@@ -563,8 +564,12 @@ function activateTimedSkill(key, duration = TEMP_SKILL_DURATION) {
   updateGravity(now);
 }
 
+function isComboTimerPaused(now = performance.now()) {
+  return state.isChoosingSkill || now < state.comboFreezeExpiresAt;
+}
+
 function isComboFrozen(now = performance.now()) {
-  return now < state.comboFreezeExpiresAt;
+  return isComboTimerPaused(now);
 }
 
 function isDoubleDropActive(now = performance.now()) {
