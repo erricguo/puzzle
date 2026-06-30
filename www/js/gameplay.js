@@ -416,6 +416,7 @@ function startGame() {
   playClickSound();
   if (state.hasStarted) return;
   state.hasStarted = true;
+  document.body.classList.add('game-active');
   startScene.hidden = true;
   resetGame();
 }
@@ -735,6 +736,7 @@ function returnToStartScene() {
   skillPanel.hidden = true;
   debugPanel.hidden = true;
   startScene.hidden = false;
+  document.body.classList.remove('game-active');
   pauseButton.textContent = '暫停';
   setNextLevel();
   updateHud();
