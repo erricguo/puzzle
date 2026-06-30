@@ -135,6 +135,18 @@ button {
   display: none !important;
 }
 
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 .app-shell {
   position: fixed;
   inset: 0;
@@ -1302,24 +1314,27 @@ body:not(.game-active) .game-frame {
   z-index: 20;
   display: grid;
   place-items: center;
-  align-content: center;
+  align-content: end;
   grid-template-columns: minmax(0, 1fr);
   gap: clamp(9px, 1.4vh, 14px);
   padding:
-    max(14px, var(--safe-top))
+    max(42vh, calc(var(--safe-top) + 220px))
     max(18px, var(--safe-right))
     max(18px, var(--safe-bottom))
     max(18px, var(--safe-left));
   overflow-y: auto;
   overflow-x: hidden;
   background:
+    url("assets/images/title.png"),
     linear-gradient(90deg, rgba(255,255,255,0.28) 1px, transparent 1px),
     linear-gradient(180deg, rgba(255,255,255,0.24) 1px, transparent 1px),
     radial-gradient(circle at 50% 20%, rgba(255, 218, 79, 0.52), transparent 20%),
     radial-gradient(circle at 14% 76%, rgba(84, 214, 201, 0.24), transparent 24%),
     radial-gradient(circle at 86% 70%, rgba(255, 111, 154, 0.2), transparent 24%),
     linear-gradient(180deg, #fbfff2 0%, #e8f7d0 52%, #cdebaa 100%);
-  background-size: 34px 34px, 34px 34px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+  background-position: center, center, center, center, center, center, center;
+  background-repeat: no-repeat, repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background-size: cover, 34px 34px, 34px 34px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
   text-align: center;
 }
 
@@ -1366,6 +1381,7 @@ body:not(.game-active) .game-frame {
 }
 
 .start-art {
+  display: none;
   position: relative;
   z-index: 1;
   width: min(64vw, 286px, 30vh);
@@ -1439,7 +1455,7 @@ body:not(.game-active) .game-frame {
 .start-copy {
   position: relative;
   z-index: 1;
-  display: grid;
+  display: none;
   gap: 6px;
   max-width: min(88vw, 410px);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.72);
@@ -1608,7 +1624,7 @@ body:not(.game-active) .game-frame {
 @media (max-height: 760px) {
   .start-scene {
     gap: 7px;
-    padding-top: max(8px, var(--safe-top));
+    padding-top: max(38vh, calc(var(--safe-top) + 190px));
     padding-bottom: max(10px, var(--safe-bottom));
   }
 
