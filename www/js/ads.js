@@ -1,14 +1,20 @@
 const ADMOB_CONFIG = {
+  androidInterstitialAdId: 'ca-app-pub-3940256099942544/1033173712',
   androidRewardAdId: 'ca-app-pub-3940256099942544/5224354917',
   isTesting: true,
   prepareTimeoutMs: 20000,
-  showTimeoutMs: 90000
+  showTimeoutMs: 90000,
+  interstitialMinIntervalMs: 120000,
+  interstitialEveryGameOvers: 2
 };
 
 const adsState = {
   initialized: false,
   initializing: null,
-  pluginLoading: null
+  pluginLoading: null,
+  lastInterstitialAt: 0,
+  gameOverInterstitialAttempts: 0,
+  interstitialShowing: false
 };
 
 function getAdMobPlugin() {
@@ -144,6 +150,84 @@ async function showRewardedRefreshAd() {
   }
 }
 
+function canShowGameOverInterstitial() {
+  const now = Date.now();
+  if (adsState.interstitialShowing) return false;
+  if (now - adsState.lastInterstitialAt < ADMOB_CONFIG.interstitialMinIntervalMs) return false;
+  adsState.gameOverInterstitialAttempts += 1;
+  return adsState.gameOverInterstitialAttempts >= ADMOB_CONFIG.interstitialEveryGameOvers;
+}
+
+async function showGameOverInterstitialAd() {
+  if (!canShowGameOverInterstitial()) return false;
+
+  let AdMob = null;
+  try {
+    AdMob = await ensureAdMob();
+  } catch (error) {
+    console.warn('Interstitial ad is not available', error);
+    return false;
+  }
+
+  const handles = [];
+  adsState.interstitialShowing = true;
+  stopMusic();
+  handles.push(await addAdMobListener(AdMob, 'interstitialAdLoaded', (info) => {
+    console.info('Interstitial ad loaded', info);
+  }));
+  handles.push(await addAdMobListener(AdMob, 'interstitialAdFailedToLoad', (error) => {
+    console.warn('Interstitial ad failed to load', error);
+  }));
+  handles.push(await addAdMobListener(AdMob, 'interstitialAdFailedToShow', (error) => {
+    console.warn('Interstitial ad failed to show', error);
+  }));
+
+  try {
+    await withTimeout(AdMob.prepareInterstitial({
+      adId: ADMOB_CONFIG.androidInterstitialAdId,
+      isTesting: ADMOB_CONFIG.isTesting,
+      immersiveMode: true
+    }), ADMOB_CONFIG.prepareTimeoutMs, '插頁廣告載入逾時');
+
+    await withTimeout(new Promise((resolve, reject) => {
+      let finished = false;
+      const finish = (shown, error = null) => {
+        if (finished) return;
+        finished = true;
+        if (error) {
+          reject(error);
+        } else {
+          resolve(shown);
+        }
+      };
+
+      Promise.all([
+        addAdMobListener(AdMob, 'interstitialAdDismissed', () => finish(true)),
+        addAdMobListener(AdMob, 'interstitialAdFailedToShow', (error) => {
+          finish(false, new Error(error?.message || '插頁廣告顯示失敗'));
+        })
+      ])
+        .then((showHandles) => {
+          handles.push(...showHandles);
+          return AdMob.showInterstitial();
+        })
+        .then(() => finish(true))
+        .catch((error) => finish(false, error));
+    }), ADMOB_CONFIG.showTimeoutMs, '插頁廣告顯示逾時');
+
+    adsState.lastInterstitialAt = Date.now();
+    adsState.gameOverInterstitialAttempts = 0;
+    return true;
+  } catch (error) {
+    console.warn('Interstitial ad skipped', error);
+    return false;
+  } finally {
+    adsState.interstitialShowing = false;
+    removeAdMobListeners(handles);
+  }
+}
+
 window.VeggieMergeAds = {
-  showRewardedRefreshAd
+  showRewardedRefreshAd,
+  showGameOverInterstitialAd
 };

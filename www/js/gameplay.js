@@ -30,7 +30,7 @@ function createWallBodies() {
     isStatic: true,
     label: 'wall',
     collisionFilter: { category: 0x0002, mask: 0xffffffff },
-    render: { fillStyle: '#4f6f3a' }
+    render: { visible: false }
   });
   walls.floor.isFloor = true;
   walls.left = Bodies.rectangle(-thickness / 2, state.height / 2, thickness, state.height * 2, {
@@ -457,6 +457,11 @@ async function finishGame(options = {}) {
   }
   stopMusic();
   playGameOverSound();
+  if (showGameOverPanel && state.reviveTickets <= 0) {
+    window.setTimeout(() => {
+      window.VeggieMergeAds?.showGameOverInterstitialAd?.();
+    }, 900);
+  }
   recordDailyMissionProgress('play', 1);
   const canRevive = showGameOverPanel && state.reviveTickets > 0 && !state.reviveUsedThisRun;
   const scoreSubmit = canRevive ? Promise.resolve(null) : submitLeaderboardScore();

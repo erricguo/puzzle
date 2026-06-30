@@ -13,6 +13,7 @@
     radial-gradient(circle at 12% 84%, rgba(104, 216, 77, 0.24), transparent 28%),
     linear-gradient(180deg, #fbfff2 0%, #e9f7d4 55%, #d4ecb4 100%);
   --frame-bg:
+    url("assets/images/green.png"),
     radial-gradient(circle at 50% 0%, rgba(255, 248, 202, 0.58), transparent 32%),
     linear-gradient(180deg, #f1f9e5 0%, #e3f2cf 58%, #cfe8af 100%);
   --hud-bg:
@@ -39,6 +40,7 @@ body.skin-sunset {
     radial-gradient(circle at 18% 86%, rgba(126, 183, 83, 0.24), transparent 30%),
     linear-gradient(180deg, #fff8d9 0%, #ffd79c 58%, #e89965 100%);
   --frame-bg:
+    url("assets/images/Sunset.png"),
     radial-gradient(circle at 50% 0%, rgba(255, 229, 139, 0.62), transparent 34%),
     linear-gradient(180deg, #fff0bf 0%, #ffd69a 58%, #e9a167 100%);
   --hud-bg: linear-gradient(180deg, rgba(255, 250, 231, 0.96), rgba(255, 222, 167, 0.92));
@@ -59,6 +61,7 @@ body.skin-midnight {
     radial-gradient(circle at 24% 86%, rgba(255, 216, 77, 0.14), transparent 28%),
     linear-gradient(180deg, #202941 0%, #172033 58%, #101827 100%);
   --frame-bg:
+    url("assets/images/night.png"),
     radial-gradient(circle at 50% 0%, rgba(39, 215, 200, 0.24), transparent 34%),
     linear-gradient(180deg, #263453 0%, #18243c 58%, #101a2e 100%);
   --hud-bg: linear-gradient(180deg, rgba(36, 48, 77, 0.96), rgba(24, 35, 59, 0.92));
@@ -79,6 +82,7 @@ body.skin-frost {
     radial-gradient(circle at 16% 86%, rgba(255, 255, 255, 0.46), transparent 30%),
     linear-gradient(180deg, #f9feff 0%, #d9f4ff 58%, #b7dcef 100%);
   --frame-bg:
+    url("assets/images/Frost.png"),
     radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.78), transparent 34%),
     linear-gradient(180deg, #f1fcff 0%, #d7f2fb 58%, #bfe4f1 100%);
   --hud-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(218, 246, 255, 0.92));
@@ -180,7 +184,9 @@ button {
   border: 3px solid rgba(255, 255, 255, 0.78);
   border-radius: 8px;
   background: var(--frame-bg);
-  background-size: 100% 100%, 100% 100%;
+  background-position: center, center, center;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-size: cover, 100% 100%, 100% 100%;
   box-shadow: 0 8px 0 rgba(49, 94, 35, 0.38), 0 20px 42px rgba(48, 78, 35, 0.22);
 }
 
