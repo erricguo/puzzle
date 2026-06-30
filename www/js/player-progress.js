@@ -1,4 +1,9 @@
 const PLAYER_PROGRESS_TABLE = 'vegetable_player_progress';
+const PLAYER_PROGRESS_SYNC_DELAY_MS = 750;
+let playerProgressSyncTimer = null;
+let playerProgressSyncInFlight = null;
+let playerProgressSyncQueued = false;
+let lastPlayerProgressPayloadKey = '';
 
 function normalizeTalentIds(ids) {
   const validIds = new Set(TALENT_DEFS.map((talent) => talent.id));
@@ -27,6 +32,37 @@ function currentAudioSettings() {
     sfxVolume: audioState.sfxVolume,
     hapticsEnabled: hapticsState.enabled
   });
+}
+
+function createPlayerProgressPayload() {
+  const user = leaderboardState.user;
+  if (!user) return null;
+
+  const guestIdentity = user.is_anonymous
+    ? {
+      guest_player_id: leaderboardState.guestPlayerId,
+      guest_player_name: leaderboardState.guestPlayerName
+    }
+    : {
+      guest_player_id: null,
+      guest_player_name: null
+    };
+
+  return {
+    user_id: user.id,
+    coins: Math.max(0, Math.floor(state.coins)),
+    owned_talents: normalizeTalentIds(state.ownedTalents),
+    revive_tickets: normalizeProgressInteger(state.reviveTickets),
+    bombs: normalizeProgressInteger(state.bombs),
+    selected_skin: normalizeSkinId?.(state.selectedSkin) || 'garden',
+    daily_missions: normalizeDailyMissionPayload(state.dailyMissionState),
+    audio_settings: currentAudioSettings(),
+    ...guestIdentity
+  };
+}
+
+function playerProgressPayloadKey(payload) {
+  return JSON.stringify(payload);
 }
 
 function normalizeDailyMissionPayload(payload) {
@@ -74,42 +110,54 @@ function resetProgressForIdentityLoad() {
 
 async function persistPlayerProgressToSupabase() {
   const client = leaderboardState.client;
-  const user = leaderboardState.user;
-  if (!client || !user) return false;
-
-  const guestIdentity = user.is_anonymous
-    ? {
-      guest_player_id: leaderboardState.guestPlayerId,
-      guest_player_name: leaderboardState.guestPlayerName
-    }
-    : {
-      guest_player_id: null,
-      guest_player_name: null
-    };
+  const payload = createPlayerProgressPayload();
+  if (!client || !payload) return false;
 
   const { error } = await client
     .from(PLAYER_PROGRESS_TABLE)
     .upsert({
-      user_id: user.id,
-      coins: Math.max(0, Math.floor(state.coins)),
-      owned_talents: normalizeTalentIds(state.ownedTalents),
-      revive_tickets: normalizeProgressInteger(state.reviveTickets),
-      bombs: normalizeProgressInteger(state.bombs),
-      selected_skin: normalizeSkinId?.(state.selectedSkin) || 'garden',
-      daily_missions: normalizeDailyMissionPayload(state.dailyMissionState),
-      audio_settings: currentAudioSettings(),
-      ...guestIdentity,
+      ...payload,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' });
 
   if (error) throw error;
+  lastPlayerProgressPayloadKey = playerProgressPayloadKey(payload);
   return true;
 }
 
 function queuePlayerProgressSync() {
   if (!leaderboardState.isIdentityReady) return;
-  persistPlayerProgressToSupabase().catch((error) => {
+  playerProgressSyncQueued = true;
+  window.clearTimeout(playerProgressSyncTimer);
+  playerProgressSyncTimer = window.setTimeout(flushQueuedPlayerProgressSync, PLAYER_PROGRESS_SYNC_DELAY_MS);
+}
+
+function flushQueuedPlayerProgressSync() {
+  if (!leaderboardState.isIdentityReady) return;
+  if (playerProgressSyncInFlight) {
+    playerProgressSyncQueued = true;
+    return;
+  }
+
+  const payload = createPlayerProgressPayload();
+  if (!payload) return;
+
+  const payloadKey = playerProgressPayloadKey(payload);
+  if (!playerProgressSyncQueued && payloadKey === lastPlayerProgressPayloadKey) return;
+  playerProgressSyncQueued = false;
+
+  if (payloadKey === lastPlayerProgressPayloadKey) return;
+
+  playerProgressSyncInFlight = persistPlayerProgressToSupabase()
+    .catch((error) => {
     console.warn('Player progress Supabase save failed', error);
+    })
+    .finally(() => {
+      playerProgressSyncInFlight = null;
+      if (playerProgressSyncQueued) {
+        window.clearTimeout(playerProgressSyncTimer);
+        playerProgressSyncTimer = window.setTimeout(flushQueuedPlayerProgressSync, PLAYER_PROGRESS_SYNC_DELAY_MS);
+      }
   });
 }
 
